@@ -1,0 +1,15 @@
+Package: SPQV
+Title: Probabilistic validation of QTL Mapping
+Version: 0.0.0.9000
+Authors@R: person("B", "Haining", email = "haining@berkeley.edu",
+                  role = c("aut", "cre"))
+           person("K", "Blumer", email = "kblumer@gmail.com",
+                  role = c("aut",'cre'))
+Description: The Scanning Probabilistic QTL Validator package allows for the easy assessment of any QTL mapping experiment. The package is designed to assess the number of previously identified genes for a trait of interest that are present within the confidence intervals of the QTL. This number is compared to the expected number of identified genes, as calculated over a large number of simulations.
+License: CC0
+Encoding: UTF-8
+LazyData: true
+Imports: stringr, dplyr
+RoxygenNote: 7.0.2
+Suggests: 
+    testthat
