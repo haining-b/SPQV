@@ -12,13 +12,14 @@ SPQValidate(
   chromosome_size,
   MarkerList,
   WholeGenomeGeneDistribution,
-  Placement_Type
+  Placement_Type,
+  Simulation_Environment
 )
 }
 \arguments{
 \item{QTL_with_Metadata}{A 7 column matrix containing the chromosome
 on which the QTL was originally found ('Chromosome'), the Leftmost
- Confidence interval's location,the Rightmost Conficence interval's location,
+ Confidence interval's location,the Rightmost Confidence interval's location,
  the trait for which the QTL were discovered, the treatment that was applied,
  the mapping method, the overall type of experiment, and the lengths of the QTL.}
 
@@ -27,7 +28,7 @@ on which the QTL was originally found ('Chromosome'), the Leftmost
 \item{number_repetitions}{An integer defining the number of simulations to run.}
 
 \item{gene_list}{A 4 column matrix containing a list of known genes.
-Columns should include "GeneID', "Trait", "Chromosome", and "Start_Site".}
+Columns should include "GeneID', "Trait", "Chromosome", and "Locus".}
 
 \item{chromosome_size}{A matrix containing the number of each chromosome,
 their total lengths, and the first and last markers used for the original
@@ -42,6 +43,10 @@ function uses GeneMiddle to simulate gene placement.}
 
 \item{Placement_Type}{Either 'extension' or 'centered'. This depends on the
 mapping style of the original QTL experiment.}
+
+\item{Simulation_Environment}{A new environment in which a dataframe containing the
+results of each simulation is stored. This dataframe can be accessed as
+Your_Environment$Simulation_Dataframe.}
 }
 \value{
 A matrix containing the lengths of QTL (as an identifier), the true observed

@@ -14,7 +14,7 @@ on which the QTL was originally found ('Chromosome'), the Leftmost
  the mapping method, the overall type of experiment, and the lengths of the QTL.}
 
 \item{gene_list}{A 4 column matrix containing a list of known genes.
-Columns should include "GeneID', "Trait", "Chromosome", and "Start_Site".}
+Columns should include "GeneID', "Trait", "Chromosome", and "Locus".}
 
 \item{Trait}{The trait for which you would like to produce a gene list.}
 

@@ -12,7 +12,7 @@ Gene_List_Groomer(MarkerList, gene_list, Placement_Type, Trait)
 (ID, Chromosome, and Base)).}
 
 \item{gene_list}{A 4 column matrix containing a list of known genes.
-Columns should include "GeneID', "Trait", "Chromosome", and "Start_Site".}
+Columns should include "GeneID', "Trait", "Chromosome", and "Locus".}
 
 \item{Placement_Type}{Either 'extension' or 'centered'. This depends on the
 mapping style of the original QTL experiment.}
@@ -21,7 +21,7 @@ mapping style of the original QTL experiment.}
 }
 \value{
 A 4 column matrix containing "GeneID', "Trait", "Chromosome",
-and "Start_Site" for each remaining gene in the trait specified.
+and "Locus" for each remaining gene in the trait specified.
 }
 \description{
 This function takes a gene list and refines it based on the specific trait you
