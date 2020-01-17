@@ -711,6 +711,19 @@ SPQValidate<-function(QTL_with_Metadata,
   ######Checking inputs#######
   ############################
 
+  #Trait testing
+  #####
+  if(typeof(Trait)!=typeof(gene_list$Trait[1])){
+    stop('Trait input is not the same type as gene_list Trait. Check both type and
+         gene_list column order.')
+  }
+  if(typeof(Trait)=='character'&typeof(gene_list$Trait[1])=='character'){
+    Trait<-tolower(Trait)
+    gene_list$Trait<-tolower(gene_list$Trait)
+    QTL_with_Metadata$Trait<-tolower(QTL_with_Metadata$Trait)
+  }
+  ######
+
   #Checking WholeGenomeGeneDistribution
   #####
   colnames(WholeGenomeGeneDistribution)<-c("Chromosome","GeneStart","GeneEnd","GeneMiddle")
@@ -758,7 +771,65 @@ SPQValidate<-function(QTL_with_Metadata,
   }
   #####
   #####
-  #All others checked by function calls
+
+  # Checking QTL_with_Metadata
+  #####
+  if(typeof(QTL_with_Metadata$Leftmost_Marker[1])=='double'){
+    QTL_with_Metadata$Leftmost_Marker<-as.integer(QTL_with_Metadata$Leftmost_Marker)
+  }
+  if(typeof(QTL_with_Metadata$Leftmost_Marker[1])!='integer' &
+     typeof(QTL_with_Metadata$Leftmost_Marker[1])!='numeric'){
+    warning("QTL_with_Metadata Leftmost_Marker column contains neither integer nor numeric types.")
+  }
+  if(typeof(QTL_with_Metadata$Rightmost_Marker[1])=='double'){
+    QTL_with_Metadata$Rightmost_Marker<-as.integer(QTL_with_Metadata$Rightmost_Marker)
+  }
+  if(typeof(QTL_with_Metadata$Rightmost_Marker[1])!='integer' &
+     typeof(QTL_with_Metadata$Rightmost_Marker[1])!='numeric'){
+    warning("QTL_with_Metadata Rightmost_Marker column contains neither integer nor numeric types.")
+  }
+  if(typeof(QTL_with_Metadata$Chromosome[1])=='double'){
+    QTL_with_Metadata$Chromosome<-as.integer(QTL_with_Metadata$Chromosome)
+  }
+  if(typeof(QTL_with_Metadata$Chromosome[1])!='integer' &
+     typeof(QTL_with_Metadata$Chromosome[1])!='numeric'){
+    warning("QTL_with_Metadata Chromosome column contains neither integer nor numeric types.")
+  }
+
+  if(mean(nchar(QTL_with_Metadata$Chromosome))>4){
+    warning("QTL_with_Metadata Chromosome number is unusually large. Column may represent confidence interval instead.")
+  }
+
+  if(mean(nchar(QTL_with_Metadata$Leftmost_Marker))<4){
+    warning("QTL_with_Metadata Leftmost_Marker number is unusually small. Column may represent Chromosome instead.")
+  }
+
+  if(mean(nchar(QTL_with_Metadata$Rightmost_Marker))<4){
+    warning("QTL_with_Metadata Rightmost_Marker number is unusually small. Column may represent Chromosome instead.")
+  }
+  if(mean(QTL_with_Metadata$Leftmost_Marker)>mean(QTL_with_Metadata$Rightmost_Marker)){
+    warning("QTL_with_Metadata Leftmost_Marker is larger than Rightmost_Marker. Check column order.")
+  }
+  if(typeof(QTL_with_Metadata$QTL_Type)!='character'){
+    warning("QTL_with_Metadata$QTL_Type should contain character values to ensure appropriate column use.")
+  }
+  if(typeof(QTL_with_Metadata$Trait)!='character'){
+    warning("QTL_with_Metadata$Trait should contain character values to ensure appropriate column use.")
+  }
+  if(typeof(QTL_with_Metadata$Treatment)!='character'){
+    warning("QTL_with_Metadata$Treatment should contain character values to ensure appropriate column use.")
+  }
+
+  #Placement_Type Checks
+  #####
+  if(typeof(Placement_Type) != 'character'){
+    stop("Placement_Type must be either 'extension' or 'centered'.")
+  }
+  Placement_Type<-tolower(Placement_Type)
+  if(Placement_Type!='extension' & Placement_Type!='centered'){
+    stop("Placement_Type must be either 'extension' or 'centered'.")
+  }
+  #####
 
 
   TrueGeneList<-gene_list
