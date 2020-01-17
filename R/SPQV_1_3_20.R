@@ -810,9 +810,7 @@ SPQValidate<-function(QTL_with_Metadata,
   if(mean(QTL_with_Metadata$Leftmost_Marker)>mean(QTL_with_Metadata$Rightmost_Marker)){
     warning("QTL_with_Metadata Leftmost_Marker is larger than Rightmost_Marker. Check column order.")
   }
-  if(typeof(QTL_with_Metadata$QTL_Type)!='character'){
-    warning("QTL_with_Metadata$QTL_Type should contain character values to ensure appropriate column use.")
-  }
+
   if(typeof(QTL_with_Metadata$Trait)!='character'){
     warning("QTL_with_Metadata$Trait should contain character values to ensure appropriate column use.")
   }
