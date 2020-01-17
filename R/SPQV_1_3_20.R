@@ -1,6 +1,7 @@
 
 #' Create chromosome specific matrices of QTL mapping marker locations
 #'
+#'
 #' This function produces N matrices containing the locations of the
 #' markers used in a QTL mapping experiment, where N refers to the number
 #' of chromosomes in the organism of interest.
