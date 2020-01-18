@@ -581,6 +581,7 @@ GeneCounter<-function(QTL_with_Metadata,gene_list,Trait,Placement_Type, MarkerLi
                          "Rightmost_Marker", "Trait",'Treatment',
                          "Length","QTL_Type","N_Genes",'N_QTL')]
     colnames(identified_genes)[9]<-'Number_Trait_QTL'
+    colnames(QTLData)[7]<-'Number_Trait_QTL'
     identified_genes2<-identified_genes
 
     if(length(identified_genes[,1])>1){
@@ -619,8 +620,40 @@ GeneCounter<-function(QTL_with_Metadata,gene_list,Trait,Placement_Type, MarkerLi
 
       return(CountedIdentifiedGenesOutput2)
     }
+
+
     if(length(identified_genes[,1])==1){
-      return(identified_genes)
+
+
+      CountedIdentifiedGenesOutput<-identified_genes[,c(1:5,7,9,8,6)]
+      toCompareID<-CountedIdentifiedGenesOutput[,c(1:7)]
+      toCompareQTLData<-QTLData[,c(1:7)]
+      NoGenes<-setdiff(toCompareQTLData,toCompareID)
+
+
+      if(length(NoGenes$Chromosome)>0){
+        NoGenes$N_Genes<-c(0)
+        NoGenes$Length<-as.numeric(as.character(NoGenes$Rightmost_Marker))-as.numeric(as.character(NoGenes$Leftmost_Marker))
+        NoGenesOutput<-NoGenes
+
+        colnames(NoGenesOutput)<-c("Chromosome", "Leftmost_Marker",
+                                   "Rightmost_Marker", "Trait",
+                                   "Treatment","QTL_Type","Number_Trait_QTL",
+                                    "N_Genes","Length")
+        colnames(CountedIdentifiedGenesOutput)<-c("Chromosome", "Leftmost_Marker",
+                                                  "Rightmost_Marker", "Trait", "Treatment", "QTL_Type",
+                                                  "Number_Trait_QTL",
+                                                  "N_Genes", "Length")
+
+
+        CountedIdentifiedGenesOutput2<-rbind(CountedIdentifiedGenesOutput,NoGenesOutput)
+        CountedIdentifiedGenesOutput2<-CountedIdentifiedGenesOutput2[,c(1:6,9,7:8)]
+        return(CountedIdentifiedGenesOutput2)
+      }else{
+        CountedIdentifiedGenesOutput2<-CountedIdentifiedGenesOutput
+        return(CountedIdentifiedGenesOutput2)
+      }
+      return(CountedIdentifiedGenesOutput2)
     } else{
       return("No identified genes for this trait")
     }
