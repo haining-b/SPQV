@@ -282,10 +282,9 @@ QTL_Placement_Probabilities<-function(QTLofInterest,chromosome_size,Sectioned_Li
 
   #trait type checks
   #######
-  if(typeof(Trait)=='character'&typeof(gene_list$Trait[1])=='character'){
+  if(typeof(Trait)=='character'&typeof(QTLofInterest$Trait[1])=='character'){
     Trait<-tolower(Trait)
-    gene_list$Trait<-tolower(gene_list$Trait)
-    QTLofInterest$Trait<-tolower(QTL_with_Metadata$Trait)
+    QTLofInterest$Trait<-tolower(QTLofInterest$Trait)
   }
 
 
@@ -597,7 +596,7 @@ GeneCounter<-function(QTL_with_Metadata,gene_list,Trait,Placement_Type, MarkerLi
       }
 
       CountedIdentifiedGenesOutput<-CountedIdentifiedGenes
-      NoGenes<-setdiff(QTLData[1:7],CountedIdentifiedGenes[1:7])
+      NoGenes<-dplyr::setdiff(QTLData[1:7],CountedIdentifiedGenes[1:7])
 
       if(length(NoGenes$Chromosome)>0){
         NoGenes$Length<-as.numeric(as.character(NoGenes$Rightmost_Marker))-as.numeric(as.character(NoGenes$Leftmost_Marker))
@@ -628,7 +627,7 @@ GeneCounter<-function(QTL_with_Metadata,gene_list,Trait,Placement_Type, MarkerLi
       CountedIdentifiedGenesOutput<-identified_genes[,c(1:5,7,9,8,6)]
       toCompareID<-CountedIdentifiedGenesOutput[,c(1:7)]
       toCompareQTLData<-QTLData[,c(1:7)]
-      NoGenes<-setdiff(toCompareQTLData,toCompareID)
+      NoGenes<-dplyr::setdiff(toCompareQTLData,toCompareID)
 
 
       if(length(NoGenes$Chromosome)>0){
