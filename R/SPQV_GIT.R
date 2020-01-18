@@ -280,12 +280,6 @@ QTL_Placement_Probabilities<-function(QTLofInterest,chromosome_size,Sectioned_Li
   }
   #####
 
-  #trait type checks
-  #######
-  if(typeof(Trait)=='character'&typeof(QTLofInterest$Trait[1])=='character'){
-    Trait<-tolower(Trait)
-    QTLofInterest$Trait<-tolower(QTLofInterest$Trait)
-  }
 
 
   #######
