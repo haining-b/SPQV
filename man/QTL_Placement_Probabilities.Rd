@@ -16,9 +16,8 @@ QTL_Placement_Probabilities(
 was originally found ('Chromosome'), the Leftmost Confidence interval's location,
 and the Rightmost Conficence interval's location.}
 
-\item{chromosome_size}{A matrix containing the number of each chromosome,
-their total lengths, and the first and last markers used for the original
-mapping experiment.}
+\item{chromosome_size}{A matrix containing the number of each chromosome
+and the first and last markers used for the original mapping experiment.}
 
 \item{Sectioned_List}{The list of the names of the N matrices of marker loci
 resulting from use of the Marker_Sectioner function.}
