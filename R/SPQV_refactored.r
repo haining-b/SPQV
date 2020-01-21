@@ -77,7 +77,6 @@ FilterGeneList <-
     }
     trait <- tolower(trait)
     gene_list$Trait <- tolower(gene_list$Trait)
-    qtl_list$Trait <- tolower(qtl_list$Trait)
 
     placement_types <- c("extension", "centered")
     if (!(placement_type %in% placement_types)) {
@@ -91,19 +90,19 @@ FilterGeneList <-
     }
 
     validateDf(gene_list, list(
-      c("GeneId", "character"),
+      c("ID", "character"),
       c("Trait", "character"),
       c("Chromosome", "integer"),
       c("Base", "integer")
     ))
 
     validateDf(marker_list, list(
-      c("Id", "character"),
+      c("ID", "character"),
       c("Chromosome", "integer"),
       c("Base", "integer")
     ))
 
-    trait_gene_list <- trait_gene_list[grep(trait, gene_list$Trait), ]
+    trait_gene_list <- gene_list[which(gene_list$Trait==trait), ]
     trait_gene_list <- unique(trait_gene_list)
 
     if (length(trait_gene_list$Trait) == 0) {
@@ -113,12 +112,12 @@ FilterGeneList <-
         length(trait_gene_list$Trait) == 1) {
       return(trait_gene_list)
     }
-    if (Placement_Type == 'extension') {
+    if (placement_type == 'extension') {
       marker_list$Trait <- "Marker"
       loci_list <- rbind(marker_list, trait_gene_list)
       loci_list <-
-        loci_list[order(loci_list$Chromosome, loci_list$Locus), ]
-      gene_spots <- grep(trait, loci_list$Trait)
+        loci_list[order(loci_list$Chromosome, loci_list$Base), ]
+      gene_spots<-which(loci_list$Trait==trait)
       tandem_arrays <- c()
       # TODO ask whats happening here, leaving rest of func alone bc i dont know
       for (i in 2:length(gene_spots)) {
