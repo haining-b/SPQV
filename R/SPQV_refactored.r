@@ -36,7 +36,7 @@ validateDf <- function(df, req_cols, return_stripped = True) {
 # TODO add back docs
 SectionMarkers <- function(marker_list, num_chromosomes) {
   validateDf(marker_list, list(
-    c("Id", "character"),
+    c("ID", "character"),
     c("Chromosome", "integer"),
     c("Base", "integer")
   ))
@@ -148,6 +148,7 @@ FilterGeneList <-
         }
       }
       # TODO orig return was here, moved it bc assuming that was unintentional?
+      #probs ok, testing isn't showing problems
     }
     return(unique(trait_gene_list[grep(1, presence_absence), ]))
   }
@@ -188,7 +189,7 @@ QTLPlacementProbabilities <-
     }
 
     # Sort chromosomes
-    chromosome_size <- chromosome_size[order(as.numeric(chromosome_size$Number)), ]
+    chromosome_size <- chromosome_size[order(as.numeric(chromosome_size$Chromosome)), ]
     num_chromosomes <- as.numeric(length(chromosome_size[, 1]))
 
     if (length(qtl_list$Length) == 0 | sum(qtl_list$Length) == 0) {
@@ -216,14 +217,16 @@ QTLPlacementProbabilities <-
 
       for (chr_i in  1:num_chromosomes) {
         first_marker <-
-          chromosome_size$LeftmostMarker[chr_i])
+          chromosome_size$LeftmostMarker[chr_i]
         last_marker <-
-          chromosome_size$RightmostMarker[chr_i])
+          chromosome_size$RightmostMarker[chr_i]
 
         first_avail_marker <- first_marker + qtl_ext_length
         last_avail_marker <- last_marker - qtl_ext_length
 
-        chr_markers <- sectioned_list[chr_i]
+        #this line is the bug - can't just pick a df out of a list like this
+        chr_markers <-sectioned_marker_list[chr_i]
+        chr_markers<-chr_markers[[1]]
 
         remaining_markers_lr <-
           chr_markers[which(chr_markers$Base < last_avail_marker), ]
