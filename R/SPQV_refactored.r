@@ -266,7 +266,7 @@ CountGenes <-
       c("Length", "integer")
     ))
 
-    if (typeof(trait) != 'character') {
+    if  (typeof(trait) != 'character') {
       stop("Trait input must be of type 'character'.")
     }
     trait <- tolower(trait)
@@ -295,6 +295,12 @@ CountGenes <-
     if (length(trait_gene_list) <= 1) {
       return(trait_gene_list)
     }
+    
+    trait_qtl_list <-
+      qtl_list[which(qtl_list$Trait==trait), ]
+    if (length(trait_qtl_list[,1]) == 0) {
+      stop("No QTL found for this trait.")
+    }
 
     if (length(qtl_list[, 1]) > 1) {
       trait_treatment_qtl_count <-
@@ -309,14 +315,7 @@ CountGenes <-
       colnames(trait_treatment_qtl_count) <-
         c("Trait", 'Treatment', 'NumQTL')
 
-      # TODO Is there a reason we don't do this before getting trait_treatment_qtl_count? Might be answered below, just making a note
-      trait_qtl_list <-
-        qtl_list[grep(Trait, qtl_list$Trait), ]
-      if (length(trait_qtl_list[,1]) == 0) {
-        stop("No QTL found for this trait.")
-      }
-
-      counts <- numeric(nrows(trait_qtl_list))
+      counts <- as.numeric(nrow(trait_qtl_list))
       for (qtl_i in 1:length(trait_qtl_list[,1])) {
         treatment_count_for_qtl <-
           trait_treatment_qtl_count$NumQTL[which(
@@ -333,31 +332,31 @@ CountGenes <-
       identified_genes <- data.frame(matrix(ncol = ncol(trait_qtl_list)))
       colnames(identified_genes) <- colnames(trait_qtl_list)
 
-      for (qtl_i in 1:nrows(trait_qtl_list)) {
+      for (qtl_i in 1:nrow(trait_qtl_list)) {
         qtl_chr <- trait_qtl_list$Chromosome[qtl_i]
         qtl_marker_l <- trait_qtl_list$LeftmostMarker[qtl_i]
         qtl_marker_r <- trait_qtl_list$RightmostMarker[qtl_i]
 
-        for (gene_i in 1:nrows(trait_gene_list)) {
+        for (gene_i in 1:nrow(trait_gene_list)) {
           if (trait_gene_list$Chromosome[gene_i] != qtl_chr) {
-            # This is the "guard clause" I was talking about, makes it so you don't have to nest as many ifs  (TODO remove this note)
+            # This is the "guard clause" I was talking about, makes
+            #it so you don't have to nest as many ifs  (TODO remove this note)
             next
           }
-          gene_locus <- trait_gene_list$Locus[gene_i]
+          gene_locus <- trait_gene_list$Base[gene_i]
           if (gene_locus < qtl_marker_l | gene_locus > qtl_marker_r) {
             next
           }
-          # TODO I stopped here for now, went a bit farther but got confused by identified_genes and then caught sight of the clock D: oops
+          # TODO I stopped here for now, went a bit farther but
+          # got confused by identified_genes and then caught sight of the clock D: oops
           trait_qtl_list$NumGenes[qtl_i] <- trait_qtl_list$NumGenes[qtl_i] + 1
           trait_qtl_list$FoundGeneIDs[qtl_i] <-
-            paste0(trait_qtl_list$FoundGeneIDs[qtl_i], " and ", trait_gene_list$GeneID[gene_i])
+            paste0(trait_qtl_list$FoundGeneIDs[qtl_i], " and ", trait_gene_list$ID[gene_i])
           identified_genes <- rbind(identified_genes, trait_qtl_list[qtl_i, ])
 
         }
       }
       identified_genes <- identified_genes[-1, ]
-      identified_genes$Length <-  # TODO What does this do? Shouldn't Length already be in qtl_list?
-        identified_genes$RightmostMarker - identified_genes$LeftmostMarker
 
       identified_genes <-
         identified_genes[, c(
@@ -366,13 +365,19 @@ CountGenes <-
           "RightmostMarker",
           "Trait",
           'Treatment',
+          'Method',
           "Length",
-          "QTL_Type",
+          "ExptType",
           "NumGenes",
+          'FoundGeneIDs',
           'NumQTL'
         )]
-      colnames(identified_genes)[9] <- 'Number_Trait_QTL'
-      colnames(trait_qtl_list)[7] <- 'Number_Trait_QTL'
+      identified_genes <-
+        identified_genes[, c(
+        colnames(trait_qtl_list)
+        )]
+      names(identified_genes)[names(identified_genes) == "NumQTL"] <- 'Number_Trait_QTL'
+      names(trait_qtl_list)[names(trait_qtl_list) == "NumQTL"] <- 'Number_Trait_QTL'
       identified_genes2 <- identified_genes
 
       # lol I have no self control I rearranged these if branches --
@@ -380,6 +385,9 @@ CountGenes <-
       # (length(identified_genes[, 1]) == 1 vs. length(identified_genes[, 1]) > 1),
       # but I might have misunderstood, so here's a diff of what the two branches looked like
       # before my change: https://www.diffchecker.com/KXOBTkTS       (TODO delete this comment)
+      # No u didn't but I was having so much and such varied trouble with this stupid function that
+      # I just left it when it started working
+      
       if (length(identified_genes[, 1]) == 0) {
         return("No identified genes for this trait")
 
@@ -404,40 +412,17 @@ CountGenes <-
 
         CountedIdentifiedGenesOutput <- CountedIdentifiedGenes
       }
+   
+     
 
       NoGenes <-
-        dplyr::setdiff(trait_qtl_list[1:7], CountedIdentifiedGenesOutput[1:7])
-
+        dplyr::setdiff(trait_qtl_list, CountedIdentifiedGenesOutput)
+      
+      CountedIdentifiedGenesOutput$FoundGeneIDs<- sapply(
+        CountedIdentifiedGenesOutput$FoundGeneIDs, 
+        function(x) gsub("0 and ", "", x)
+      )  
       if (length(NoGenes$Chromosome) > 0) {
-        NoGenes$Length <-
-          as.numeric(as.character(NoGenes$RightmostMarker)) - as.numeric(as.character(NoGenes$LeftmostMarker))
-        NoGenes$NumGenes <- 0
-        NoGenesOutput <- NoGenes
-        colnames(NoGenesOutput) <- c(
-          "Chromosome",
-          "LeftmostMarker",
-          "RightmostMarker",
-          "Trait",
-          "Treatment",
-          "QTL_Type",
-          "Number_Trait_QTL",
-          "Length",
-          "NumGenes"
-        )
-        colnames(CountedIdentifiedGenesOutput) <-
-          c(
-            "Chromosome",
-            "LeftmostMarker",
-            "RightmostMarker",
-            "Trait",
-            "Treatment",
-            "QTL_Type",
-            "Number_Trait_QTL",
-            "NumGenes",
-            "Length"
-          )
-
-
         CountedIdentifiedGenesOutput2 <-
           rbind(CountedIdentifiedGenesOutput, NoGenesOutput)
       } else{
@@ -447,9 +432,11 @@ CountGenes <-
       return(CountedIdentifiedGenesOutput2)
 
     }
-    else{
+    #else{
       # TODO can we just get rid of this, and use the above branch even when we only have 1 QTL?
-      # Assuming this was originally split out, if not for debugging, then bc R handles one-row dataframes weirdly or something... but maybe we can fix that?
+      # Assuming this was originally split out, if not for debugging, then bc R handles
+      # one-row dataframes weirdly or something... but maybe we can fix that?
+      # I think there was some issue w/ the handling of NoGenes originally
       i = 1
       qtl_list$Length <-
         as.numeric(as.character(qtl_list$RightmostMarker)) - as.numeric(as.character(qtl_list$LeftmostMarker))
@@ -468,7 +455,7 @@ CountGenes <-
 
       for (Gene in 1:length(gene_list$GeneID)) {
         if (as.numeric(as.character(trait_gene_list$Chromosome[Gene])) == as.numeric(as.character(QTLchromosome))) {
-          GeneStartSite <- as.numeric(trait_gene_list$Locus[Gene])
+          GeneStartSite <- as.numeric(trait_gene_list$Base[Gene])
           if (GeneStartSite >= QTLLCI & GeneStartSite <= QTLRCI) {
             qtl_list$NumGenes[i] <-
               paste0(qtl_list$NumGenes[i],
@@ -635,7 +622,7 @@ SPQValidate <- function(qtl_with_metadata,
     marker_list = marker_list
   )
   gene_list <-
-    subset(gene_list, select = c(GeneID, Chromosome, Locus))
+    subset(gene_list, select = c(GeneID, Chromosome, Base))
 
 
   qtl_of_interest <-
