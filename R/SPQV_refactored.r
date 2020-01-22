@@ -365,7 +365,7 @@ CountGenes <-
         )]
       names(identified_genes)[names(identified_genes) == "NumQTL"] <- 'Number_Trait_QTL'
       names(trait_qtl_list)[names(trait_qtl_list) == "NumQTL"] <- 'Number_Trait_QTL'
-      identified_genes2 <- identified_genes
+      temp_identified_genes <- identified_genes
 
       # lol I have no self control I rearranged these if branches --
       # it seemed that most of the stuff in the two branches was identical
@@ -379,7 +379,7 @@ CountGenes <-
         return("No identified genes for this trait")
 
       } else if (length(identified_genes[, 1]) == 1) {
-        CountedIdentifiedGenesOutput <- identified_genes
+        temp_identified_genes <- identified_genes
 
       } else {
         for (possible_Duplicates in 1:(length(identified_genes[, 1]) - 1)) {
@@ -387,36 +387,34 @@ CountGenes <-
             identified_genes[possible_Duplicates, c(1:6)] ==
             identified_genes[possible_Duplicates + 1, c(1:6)]
           )) {
-            identified_genes2[possible_Duplicates, ] <- 0
+            temp_identified_genes[possible_Duplicates, ] <- 0
           }
         }
-        if (length(which(identified_genes2$NumGenes == 0)) > 0) {
-          CountedIdentifiedGenes <-
-            identified_genes2[-which(identified_genes2$NumGenes == 0), ]
-        } else{
-          CountedIdentifiedGenes <- identified_genes2
-        }
+        if (length(which(temp_identified_genes$NumGenes == 0)) > 0) {
+          temp_identified_genes <-
+            temp_identified_genes[-which(temp_identified_genes$NumGenes == 0), ]
+        } 
 
-        CountedIdentifiedGenesOutput <- CountedIdentifiedGenes
+        #CountedIdentifiedGenesOutput <- CountedIdentifiedGenes
       }
    
      
 
       NoGenes <-
-        dplyr::setdiff(trait_qtl_list, CountedIdentifiedGenesOutput)
+        dplyr::setdiff(trait_qtl_list, temp_identified_genes)
       
-      CountedIdentifiedGenesOutput$FoundGeneIDs<- sapply(
-        CountedIdentifiedGenesOutput$FoundGeneIDs, 
+      temp_identified_genes$FoundGeneIDs<- sapply(
+        temp_identified_genes$FoundGeneIDs, 
         function(x) gsub("0 and ", "", x)
       )  
       if (length(NoGenes$Chromosome) > 0) {
-        CountedIdentifiedGenesOutput2 <-
-          rbind(CountedIdentifiedGenesOutput, NoGenes)
+        final_IDd_genes <-
+          rbind(temp_identified_genes, NoGenes)
       } else{
-        CountedIdentifiedGenesOutput2 <- CountedIdentifiedGenesOutput
+        final_IDd_genes <- temp_identified_genes
       }
 
-      return(CountedIdentifiedGenesOutput2)
+      return(final_IDd_genes)
 
     }
 
