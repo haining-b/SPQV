@@ -283,7 +283,6 @@ CountGenes <-
       )
     }
 
-    #Everything except QTL_with_Metadata gets checked here:
     trait_gene_list <-
       FilterGeneList(
         trait = trait,
@@ -297,72 +296,72 @@ CountGenes <-
 
     }
 
-    # Checking  QTL_with_Metadata
+    # Checking  qtl_list
     #####
-    if (typeof(QTL_with_Metadata$Leftmost_Marker[1]) == 'double') {
-      QTL_with_Metadata$Leftmost_Marker <-
-        as.integer(QTL_with_Metadata$Leftmost_Marker)
+    if (typeof(qtl_list$LeftmostMarker[1]) == 'double') {
+      qtl_list$LeftmostMarker <-
+        as.integer(qtl_list$LeftmostMarker)
     }
-    if (typeof(QTL_with_Metadata$Leftmost_Marker[1]) != 'integer' &
-        typeof(QTL_with_Metadata$Leftmost_Marker[1]) != 'numeric') {
+    if (typeof(qtl_list$LeftmostMarker[1]) != 'integer' &
+        typeof(qtl_list$LeftmostMarker[1]) != 'numeric') {
       warning(
-        "QTL_with_Metadata Leftmost_Marker column contains neither integer nor numeric types."
+        "qtl_list LeftmostMarker column contains neither integer nor numeric types."
       )
     }
-    if (typeof(QTL_with_Metadata$Rightmost_Marker[1]) == 'double') {
-      QTL_with_Metadata$Rightmost_Marker <-
-        as.integer(QTL_with_Metadata$Rightmost_Marker)
+    if (typeof(qtl_list$RightmostMarker[1]) == 'double') {
+      qtl_list$RightmostMarker <-
+        as.integer(qtl_list$RightmostMarker)
     }
-    if (typeof(QTL_with_Metadata$Rightmost_Marker[1]) != 'integer' &
-        typeof(QTL_with_Metadata$Rightmost_Marker[1]) != 'numeric') {
+    if (typeof(qtl_list$RightmostMarker[1]) != 'integer' &
+        typeof(qtl_list$RightmostMarker[1]) != 'numeric') {
       warning(
-        "QTL_with_Metadata Rightmost_Marker column contains neither integer nor numeric types."
+        "qtl_list RightmostMarker column contains neither integer nor numeric types."
       )
     }
-    if (typeof(QTL_with_Metadata$Chromosome[1]) == 'double') {
-      QTL_with_Metadata$Chromosome <-
-        as.integer(QTL_with_Metadata$Chromosome)
+    if (typeof(qtl_list$Chromosome[1]) == 'double') {
+      qtl_list$Chromosome <-
+        as.integer(qtl_list$Chromosome)
     }
-    if (typeof(QTL_with_Metadata$Chromosome[1]) != 'integer' &
-        typeof(QTL_with_Metadata$Chromosome[1]) != 'numeric') {
-      warning("QTL_with_Metadata Chromosome column contains neither integer nor numeric types.")
+    if (typeof(qtl_list$Chromosome[1]) != 'integer' &
+        typeof(qtl_list$Chromosome[1]) != 'numeric') {
+      warning("qtl_list Chromosome column contains neither integer nor numeric types.")
     }
 
-    if (mean(nchar(QTL_with_Metadata$Chromosome)) > 4) {
+    if (mean(nchar(qtl_list$Chromosome)) > 4) {
       warning(
-        "QTL_with_Metadata Chromosome number is unusually large. Column may represent confidence interval instead."
-      )
-    }
-
-    if (mean(nchar(QTL_with_Metadata$Leftmost_Marker)) < 4) {
-      warning(
-        "QTL_with_Metadata Leftmost_Marker number is unusually small. Column may represent Chromosome instead."
+        "qtl_list Chromosome number is unusually large. Column may represent confidence interval instead."
       )
     }
 
-    if (mean(nchar(QTL_with_Metadata$Rightmost_Marker)) < 4) {
+    if (mean(nchar(qtl_list$LeftmostMarker)) < 4) {
       warning(
-        "QTL_with_Metadata Rightmost_Marker number is unusually small. Column may represent Chromosome instead."
+        "qtl_list LeftmostMarker number is unusually small. Column may represent Chromosome instead."
       )
     }
-    if (mean(QTL_with_Metadata$Leftmost_Marker) > mean(QTL_with_Metadata$Rightmost_Marker)) {
+
+    if (mean(nchar(qtl_list$RightmostMarker)) < 4) {
       warning(
-        "QTL_with_Metadata Leftmost_Marker is larger than Rightmost_Marker. Check column order."
+        "qtl_list RightmostMarker number is unusually small. Column may represent Chromosome instead."
       )
     }
-    if (typeof(QTL_with_Metadata$QTL_Type) != 'character') {
+    if (mean(qtl_list$LeftmostMarker) > mean(qtl_list$RightmostMarker)) {
       warning(
-        "QTL_with_Metadata$QTL_Type should contain character values to ensure appropriate column use."
+        "qtl_list LeftmostMarker is larger than RightmostMarker. Check column order."
       )
     }
-    if (typeof(QTL_with_Metadata$Trait) != 'character') {
+    if (typeof(qtl_list$QTL_Type) != 'character') {
       warning(
-        "QTL_with_Metadata$Trait should contain character values to ensure appropriate column use."
+        "qtl_list$QTL_Type should contain character values to ensure appropriate column use."
       )
     }
-    if (typeof(QTL_with_Metadata$Treatment) != 'character') {
+    if (typeof(qtl_list$Trait) != 'character') {
       warning(
-        "QTL_with_Metadata$Treatment should contain character values to ensure appropriate column use."
+        "qtl_list$Trait should contain character values to ensure appropriate column use."
+      )
+    }
+    if (typeof(qtl_list$Treatment) != 'character') {
+      warning(
+        "qtl_list$Treatment should contain character values to ensure appropriate column use."
       )
     }
 
@@ -370,9 +369,9 @@ CountGenes <-
     #####
 
 
-    if (as.numeric(as.character(length(QTL_with_Metadata[, 1]))) > 1) {
+    if (as.numeric(as.character(length(qtl_list[, 1]))) > 1) {
       TraitsandTreatments <-
-        subset(QTL_with_Metadata, select = c(Trait, Treatment))
+        subset(qtl_list, select = c(Trait, Treatment))
       sepTreatments_QTL_Count <-
         plyr::ddply(
           TraitsandTreatments,
@@ -388,7 +387,7 @@ CountGenes <-
 
 
       QTLData <-
-        QTL_with_Metadata[grep(Trait, TraitsandTreatments$Trait), ]
+        qtl_list[grep(Trait, TraitsandTreatments$Trait), ]
       if (length(QTLData$Chromosome) == 0) {
         return("No QTL found for this trait.")
       }
@@ -415,8 +414,8 @@ CountGenes <-
 
       for (i in 1:length(QTLData$Chromosome)) {
         QTLchromosome <- as.numeric(as.character(QTLData$Chromosome[i]))
-        QTLLCI <- as.numeric(as.character(QTLData$Leftmost_Marker[i]))
-        QTLRCI <- as.numeric(as.character(QTLData$Rightmost_Marker[i]))
+        QTLLCI <- as.numeric(as.character(QTLData$LeftmostMarker[i]))
+        QTLRCI <- as.numeric(as.character(QTLData$RightmostMarker[i]))
 
         for (Gene in 1:length(trait_gene_list$GeneID)) {
           if (as.numeric(as.character(trait_gene_list$Chromosome[Gene])) == as.numeric(as.character(QTLchromosome))) {
@@ -432,7 +431,7 @@ CountGenes <-
       }
       identified_genes <- identified_genes[-1, ]
       identified_genes$Length <-
-        as.numeric(as.character(identified_genes$Rightmost_Marker)) - as.numeric(as.character(identified_genes$Leftmost_Marker))
+        as.numeric(as.character(identified_genes$RightmostMarker)) - as.numeric(as.character(identified_genes$LeftmostMarker))
 
 
       identified_genes$N_Genes <-
@@ -440,8 +439,8 @@ CountGenes <-
       identified_genes <-
         identified_genes[, c(
           "Chromosome",
-          "Leftmost_Marker",
-          "Rightmost_Marker",
+          "LeftmostMarker",
+          "RightmostMarker",
           "Trait",
           'Treatment',
           "Length",
@@ -473,13 +472,13 @@ CountGenes <-
 
         if (length(NoGenes$Chromosome) > 0) {
           NoGenes$Length <-
-            as.numeric(as.character(NoGenes$Rightmost_Marker)) - as.numeric(as.character(NoGenes$Leftmost_Marker))
+            as.numeric(as.character(NoGenes$RightmostMarker)) - as.numeric(as.character(NoGenes$LeftmostMarker))
           NoGenes$N_Genes <- 0
           NoGenesOutput <- NoGenes
           colnames(NoGenesOutput) <- c(
             "Chromosome",
-            "Leftmost_Marker",
-            "Rightmost_Marker",
+            "LeftmostMarker",
+            "RightmostMarker",
             "Trait",
             "Treatment",
             "QTL_Type",
@@ -490,8 +489,8 @@ CountGenes <-
           colnames(CountedIdentifiedGenesOutput) <-
             c(
               "Chromosome",
-              "Leftmost_Marker",
-              "Rightmost_Marker",
+              "LeftmostMarker",
+              "RightmostMarker",
               "Trait",
               "Treatment",
               "QTL_Type",
@@ -521,13 +520,13 @@ CountGenes <-
         if (length(NoGenes$Chromosome) > 0) {
           NoGenes$N_Genes <- c(0)
           NoGenes$Length <-
-            as.numeric(as.character(NoGenes$Rightmost_Marker)) - as.numeric(as.character(NoGenes$Leftmost_Marker))
+            as.numeric(as.character(NoGenes$RightmostMarker)) - as.numeric(as.character(NoGenes$LeftmostMarker))
           NoGenesOutput <- NoGenes
 
           colnames(NoGenesOutput) <- c(
             "Chromosome",
-            "Leftmost_Marker",
-            "Rightmost_Marker",
+            "LeftmostMarker",
+            "RightmostMarker",
             "Trait",
             "Treatment",
             "QTL_Type",
@@ -538,8 +537,8 @@ CountGenes <-
           colnames(CountedIdentifiedGenesOutput) <-
             c(
               "Chromosome",
-              "Leftmost_Marker",
-              "Rightmost_Marker",
+              "LeftmostMarker",
+              "RightmostMarker",
               "Trait",
               "Treatment",
               "QTL_Type",
@@ -565,31 +564,31 @@ CountGenes <-
     }
     else{
       i = 1
-      QTL_with_Metadata$Length <-
-        as.numeric(as.character(QTL_with_Metadata$Rightmost_Marker)) - as.numeric(as.character(QTL_with_Metadata$Leftmost_Marker))
-      QTL_with_Metadata$N_Genes <-
-        as.character(QTL_with_Metadata$N_Genes)
+      qtl_list$Length <-
+        as.numeric(as.character(qtl_list$RightmostMarker)) - as.numeric(as.character(qtl_list$LeftmostMarker))
+      qtl_list$N_Genes <-
+        as.character(qtl_list$N_Genes)
       QTLchromosome <-
-        as.numeric(as.character(QTL_with_Metadata$Chromosome[i]))
+        as.numeric(as.character(qtl_list$Chromosome[i]))
       QTLLCI <-
-        as.numeric(as.character(QTL_with_Metadata$Leftmost_Marker[i]))
+        as.numeric(as.character(qtl_list$LeftmostMarker[i]))
       QTLRCI <-
-        as.numeric(as.character(QTL_with_Metadata$Rightmost_Marker[i]))
+        as.numeric(as.character(qtl_list$RightmostMarker[i]))
 
       identified_genes <-
-        data.frame(matrix(ncol = length(QTL_with_Metadata)))
-      colnames(identified_genes) <- colnames(QTL_with_Metadata)
+        data.frame(matrix(ncol = length(qtl_list)))
+      colnames(identified_genes) <- colnames(qtl_list)
 
       for (Gene in 1:length(gene_list$GeneID)) {
         if (as.numeric(as.character(trait_gene_list$Chromosome[Gene])) == as.numeric(as.character(QTLchromosome))) {
           GeneStartSite <- as.numeric(trait_gene_list$Locus[Gene])
           if (GeneStartSite >= QTLLCI & GeneStartSite <= QTLRCI) {
-            QTL_with_Metadata$N_Genes[i] <-
-              paste0(QTL_with_Metadata$N_Genes[i],
+            qtl_list$N_Genes[i] <-
+              paste0(qtl_list$N_Genes[i],
                      " and ",
                      trait_gene_list$GeneID[Gene])
             identified_genes <-
-              rbind(identified_genes, QTL_with_Metadata[i, ])
+              rbind(identified_genes, qtl_list[i, ])
           }
         }
       }
@@ -613,8 +612,8 @@ CountGenes <-
         CountedIdentifiedGenes <-
           identified_genes2[, c(
             "Chromosome",
-            "Leftmost_Marker",
-            "Rightmost_Marker",
+            "LeftmostMarker",
+            "RightmostMarker",
             "Trait",
             'Treatment',
             "Length",
@@ -629,8 +628,8 @@ CountGenes <-
       colnames(CountedIdentifiedGenes) <-
         c(
           "Chromosome",
-          "Leftmost_Marker",
-          "Rightmost_Marker",
+          "LeftmostMarker",
+          "RightmostMarker",
           "Trait",
           'Treatment',
           "Length",
