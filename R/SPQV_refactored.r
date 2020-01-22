@@ -358,20 +358,7 @@ CountGenes <-
       }
       identified_genes <- identified_genes[-1, ]
 
-      identified_genes <-
-        identified_genes[, c(
-          "Chromosome",
-          "LeftmostMarker",
-          "RightmostMarker",
-          "Trait",
-          'Treatment',
-          'Method',
-          "Length",
-          "ExptType",
-          "NumGenes",
-          'FoundGeneIDs',
-          'NumQTL'
-        )]
+     
       identified_genes <-
         identified_genes[, c(
         colnames(trait_qtl_list)
@@ -424,7 +411,7 @@ CountGenes <-
       )  
       if (length(NoGenes$Chromosome) > 0) {
         CountedIdentifiedGenesOutput2 <-
-          rbind(CountedIdentifiedGenesOutput, NoGenesOutput)
+          rbind(CountedIdentifiedGenesOutput, NoGenes)
       } else{
         CountedIdentifiedGenesOutput2 <- CountedIdentifiedGenesOutput
       }
@@ -432,87 +419,7 @@ CountGenes <-
       return(CountedIdentifiedGenesOutput2)
 
     }
-    #else{
-      # TODO can we just get rid of this, and use the above branch even when we only have 1 QTL?
-      # Assuming this was originally split out, if not for debugging, then bc R handles
-      # one-row dataframes weirdly or something... but maybe we can fix that?
-      # I think there was some issue w/ the handling of NoGenes originally
-      i = 1
-      qtl_list$Length <-
-        as.numeric(as.character(qtl_list$RightmostMarker)) - as.numeric(as.character(qtl_list$LeftmostMarker))
-      qtl_list$NumGenes <-
-        as.character(qtl_list$NumGenes)
-      QTLchromosome <-
-        as.numeric(as.character(qtl_list$Chromosome[i]))
-      QTLLCI <-
-        as.numeric(as.character(qtl_list$LeftmostMarker[i]))
-      QTLRCI <-
-        as.numeric(as.character(qtl_list$RightmostMarker[i]))
 
-      identified_genes <-
-        data.frame(matrix(ncol = length(qtl_list)))
-      colnames(identified_genes) <- colnames(qtl_list)
-
-      for (Gene in 1:length(gene_list$GeneID)) {
-        if (as.numeric(as.character(trait_gene_list$Chromosome[Gene])) == as.numeric(as.character(QTLchromosome))) {
-          GeneStartSite <- as.numeric(trait_gene_list$Base[Gene])
-          if (GeneStartSite >= QTLLCI & GeneStartSite <= QTLRCI) {
-            qtl_list$NumGenes[i] <-
-              paste0(qtl_list$NumGenes[i],
-                     " and ",
-                     trait_gene_list$GeneID[Gene])
-            identified_genes <-
-              rbind(identified_genes, qtl_list[i, ])
-          }
-        }
-      }
-      identified_genes <- identified_genes[-1, ]
-      identified_genes$NumGenes <-
-        stringr::str_count(identified_genes$NumGenes, 'and')
-      identified_genes2 <- identified_genes
-      if (length(as.numeric(as.character(identified_genes[, 1]))) > 1) {
-        for (possible_Duplicates in 1:(length(identified_genes[, 1]) - 1)) {
-          if (all(identified_genes[possible_Duplicates, c(1:6)] == identified_genes[possible_Duplicates +
-                                                                                    1, c(1:6)])) {
-            identified_genes2[possible_Duplicates, c(1:7)] <- 0
-          }
-        }
-
-      }
-      if (length(which(identified_genes2$NumGenes == 0)) > 0) {
-        CountedIdentifiedGenes <-
-          identified_genes2[-which(identified_genes2$NumGenes == 0), ]
-      } else{
-        CountedIdentifiedGenes <-
-          identified_genes2[, c(
-            "Chromosome",
-            "LeftmostMarker",
-            "RightmostMarker",
-            "Trait",
-            'Treatment',
-            "Length",
-            "QTL_Type",
-            "NumGenes",
-            'NumQTL'
-          )]
-        colnames(CountedIdentifiedGenes)[9] <- 'Number_Trait_QTL'
-      }
-      CountedIdentifiedGenes$NumQTL <- c(1)
-
-      colnames(CountedIdentifiedGenes) <-
-        c(
-          "Chromosome",
-          "LeftmostMarker",
-          "RightmostMarker",
-          "Trait",
-          'Treatment',
-          "Length",
-          "QTL_Type",
-          "NumGenes",
-          "Number_Trait_QTL"
-        )
-      return(CountedIdentifiedGenes)
-    }
   }
 
 
