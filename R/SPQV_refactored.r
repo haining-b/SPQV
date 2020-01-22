@@ -60,7 +60,7 @@ SectionMarkers <- function(marker_list, num_chromosomes) {
   sectioned_list <- vector("list", num_chromosomes)
 
   for (chromosome in 1:num_chromosomes) {
-    marker_df <- MarkerList[which(MarkerList$Chromosome == chromosome), ]
+    marker_df <- marker_list[which(marker_list$Chromosome == chromosome), ]
     sectioned_list[[chromosome]] <- marker_df
   }
   return(sectioned_list)
@@ -423,7 +423,7 @@ CountGenes <-
 
 
 # TODO add back documentation
-SPQValidate <- function(qtl_with_metadata,
+SPQValidate <- function(qtl_list,
                         trait,
                         num_repetitions,
                         placement_type,
@@ -448,14 +448,14 @@ SPQValidate <- function(qtl_with_metadata,
   ))
 
   validateDf(gene_list, list(
-    c("GeneId", "character"),
+    c("ID", "character"),
     c("Trait", "character"),
     c("Chromosome", "integer"),
     c("Base", "integer")
   ))
 
   validateDf(marker_list, list(
-    c("Id", "character"),
+    c("ID", "character"),
     c("Chromosome", "integer"),
     c("Base", "integer")
   ))
@@ -508,7 +508,7 @@ SPQValidate <- function(qtl_with_metadata,
   #####
   #####
 
-  qtl_of_interest <- GeneCounter(
+  qtl_of_interest <- CountGenes(
     trait = trait,
     placement_type = placement_type,
     qtl_list = qtl_list,
@@ -527,11 +527,11 @@ SPQValidate <- function(qtl_with_metadata,
     marker_list = marker_list
   )
   gene_list <-
-    subset(gene_list, select = c(GeneID, Chromosome, Base))
+    subset(gene_list, select = c(ID, Chromosome, Base))
 
 
   qtl_of_interest <-
-    qtl_of_interest[grep(trait, qtl_of_interest$Trait),]
+    qtl_of_interest[which(qtl_of_interest$Trait==trait),]
   num_qtl <- length(qtl_of_interest[, 1])
   if (sum(qtl_of_interest$Length) == 0) {
     qtl_of_interest$Length <-
@@ -546,11 +546,11 @@ SPQValidate <- function(qtl_with_metadata,
       data = 0
     ))
   pb <- txtProgressBar(0, 1, style = 3)
-
-
+  num_chromosomes<-as.integer(length(unique(marker_list$Chromosome)))
   sectioned_marker_list <-
     SectionMarkers(marker_list = marker_list,
                     num_chromosomes = num_chromosomes)
+  
   qtl_probs <- QTLPlacementProbabilities(
     placement_type = placement_type,
     qtl_list = qtl_of_interest,
@@ -559,7 +559,7 @@ SPQValidate <- function(qtl_with_metadata,
   )
 
   for (rep_i in 1:num_repetitions) {
-    random_gene_list <- sample_n(whole_genome_gene_dist, num_genes, replace=FALSE)
+    random_gene_list <- dplyr::sample_n(whole_genome_gene_dist, num_genes, replace=FALSE)
     random_gene_list$EGN <- 0
 
     for (qtl_i in 1:num_qtl) {
@@ -580,7 +580,7 @@ SPQValidate <- function(qtl_with_metadata,
         #   as.data.frame(as.matrix(eval(as.name(
         #     sectioned_marker_list[chr_number]
         #   ))))
-        markers_on_chromosome <- sectioned_marker_list[chr_number]
+        markers_on_chromosome <- sectioned_marker_list[[sampled_chr_number]]
         chr_marker_positions <- markers_on_chromosome$Base
 
         range_l <- sampled_gene_locus - qtl_ext_length
@@ -620,8 +620,7 @@ SPQValidate <- function(qtl_with_metadata,
   }
 
   colnames(output) <- paste0("Simulation_Round_", 1:num_repetitions)
-  output$QTLLength <- qtl_of_interest$Length
-  output$ObservedValue <- qtl_of_interest$NumGenes
+  
   simulation_env$SimulationDataFrame <- output
 
   std_devs <- apply(output, MARGIN = 1, FUN = sd)
@@ -630,13 +629,13 @@ SPQValidate <- function(qtl_with_metadata,
 
   for (qtl_i in 1:length(qtl_of_interest$Length)) {
     z_value <-
-      qnorm(.025 / qtl_of_interest$Number_Trait_QTL[QTL],
+      qnorm(.025 / qtl_of_interest$Number_Trait_QTL[qtl_i],
             lower.tail = FALSE)
-    mu <- rowMeans(output)[QTL]
+    mu <- rowMeans(output)[qtl_i]
     upper <- c(upper, mu + z_value * std_devs[qtl_i])
     lower <- c(lower, mu - z_value * std_devs[qtl_i])
   }
-
+  
   conf_ints <-
     as.data.frame(as.matrix(
       cbind(
@@ -648,6 +647,7 @@ SPQValidate <- function(qtl_with_metadata,
         upper
      )
   ))
+
   colnames(conf_ints) <-
     c("QTL",
       "Observed Value",
