@@ -375,10 +375,23 @@ CountGenes <-
       colnames(trait_qtl_list)[7] <- 'Number_Trait_QTL'
       identified_genes2 <- identified_genes
 
-      if (length(identified_genes[, 1]) > 1) {
+      # lol I have no self control I rearranged these if branches --
+      # it seemed that most of the stuff in the two branches was identical
+      # (length(identified_genes[, 1]) == 1 vs. length(identified_genes[, 1]) > 1),
+      # but I might have misunderstood, so here's a diff of what the two branches looked like
+      # before my change: https://www.diffchecker.com/KXOBTkTS       (TODO delete this comment)
+      if (length(identified_genes[, 1]) == 0) {
+        return("No identified genes for this trait")
+
+      } else if (length(identified_genes[, 1]) == 1) {
+        CountedIdentifiedGenesOutput <- identified_genes
+
+      } else {
         for (possible_Duplicates in 1:(length(identified_genes[, 1]) - 1)) {
-          if (all(identified_genes[possible_Duplicates, c(1:6)] == identified_genes[possible_Duplicates +
-                                                                                    1, c(1:6)])) {
+          if (all(
+            identified_genes[possible_Duplicates, c(1:6)] ==
+            identified_genes[possible_Duplicates + 1, c(1:6)]
+          )) {
             identified_genes2[possible_Duplicates, ] <- 0
           }
         }
@@ -390,63 +403,29 @@ CountGenes <-
         }
 
         CountedIdentifiedGenesOutput <- CountedIdentifiedGenes
-        NoGenes <-
-          dplyr::setdiff(trait_qtl_list[1:7], CountedIdentifiedGenes[1:7])
-
-        if (length(NoGenes$Chromosome) > 0) {
-          NoGenes$Length <-
-            as.numeric(as.character(NoGenes$RightmostMarker)) - as.numeric(as.character(NoGenes$LeftmostMarker))
-          NoGenes$NumGenes <- 0
-          NoGenesOutput <- NoGenes
-          colnames(NoGenesOutput) <- c(
-            "Chromosome",
-            "LeftmostMarker",
-            "RightmostMarker",
-            "Trait",
-            "Treatment",
-            "QTL_Type",
-            "Number_Trait_QTL",
-            "Length",
-            "NumGenes"
-          )
-          colnames(CountedIdentifiedGenesOutput) <-
-            c(
-              "Chromosome",
-              "LeftmostMarker",
-              "RightmostMarker",
-              "Trait",
-              "Treatment",
-              "QTL_Type",
-              "Number_Trait_QTL",
-              "NumGenes",
-              "Length"
-            )
-
-
-          CountedIdentifiedGenesOutput2 <-
-            rbind(CountedIdentifiedGenesOutput, NoGenesOutput)
-        } else{
-          CountedIdentifiedGenesOutput2 <- CountedIdentifiedGenesOutput
-        }
-
-        return(CountedIdentifiedGenesOutput2)
       }
 
+      NoGenes <-
+        dplyr::setdiff(trait_qtl_list[1:7], CountedIdentifiedGenesOutput[1:7])
 
-      if (length(identified_genes[, 1]) == 1) {
-        CountedIdentifiedGenesOutput <- identified_genes[, c(1:5, 7, 9, 8, 6)]
-        toCompareID <- CountedIdentifiedGenesOutput[, c(1:7)]
-        toCompareQTLData <- trait_qtl_list[, c(1:7)]
-        NoGenes <- dplyr::setdiff(toCompareQTLData, toCompareID)
-
-
-        if (length(NoGenes$Chromosome) > 0) {
-          NoGenes$NumGenes <- c(0)
-          NoGenes$Length <-
-            as.numeric(as.character(NoGenes$RightmostMarker)) - as.numeric(as.character(NoGenes$LeftmostMarker))
-          NoGenesOutput <- NoGenes
-
-          colnames(NoGenesOutput) <- c(
+      if (length(NoGenes$Chromosome) > 0) {
+        NoGenes$Length <-
+          as.numeric(as.character(NoGenes$RightmostMarker)) - as.numeric(as.character(NoGenes$LeftmostMarker))
+        NoGenes$NumGenes <- 0
+        NoGenesOutput <- NoGenes
+        colnames(NoGenesOutput) <- c(
+          "Chromosome",
+          "LeftmostMarker",
+          "RightmostMarker",
+          "Trait",
+          "Treatment",
+          "QTL_Type",
+          "Number_Trait_QTL",
+          "Length",
+          "NumGenes"
+        )
+        colnames(CountedIdentifiedGenesOutput) <-
+          c(
             "Chromosome",
             "LeftmostMarker",
             "RightmostMarker",
@@ -457,33 +436,16 @@ CountGenes <-
             "NumGenes",
             "Length"
           )
-          colnames(CountedIdentifiedGenesOutput) <-
-            c(
-              "Chromosome",
-              "LeftmostMarker",
-              "RightmostMarker",
-              "Trait",
-              "Treatment",
-              "QTL_Type",
-              "Number_Trait_QTL",
-              "NumGenes",
-              "Length"
-            )
 
 
-          CountedIdentifiedGenesOutput2 <-
-            rbind(CountedIdentifiedGenesOutput, NoGenesOutput)
-          CountedIdentifiedGenesOutput2 <-
-            CountedIdentifiedGenesOutput2[, c(1:6, 9, 7:8)]
-          return(CountedIdentifiedGenesOutput2)
-        } else{
-          CountedIdentifiedGenesOutput2 <- CountedIdentifiedGenesOutput
-          return(CountedIdentifiedGenesOutput2)
-        }
-        return(CountedIdentifiedGenesOutput2)
+        CountedIdentifiedGenesOutput2 <-
+          rbind(CountedIdentifiedGenesOutput, NoGenesOutput)
       } else{
-        return("No identified genes for this trait")
+        CountedIdentifiedGenesOutput2 <- CountedIdentifiedGenesOutput
       }
+
+      return(CountedIdentifiedGenesOutput2)
+
     }
     else{
       # TODO can we just get rid of this, and use the above branch even when we only have 1 QTL?
