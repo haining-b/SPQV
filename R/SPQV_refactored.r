@@ -247,6 +247,7 @@ QTLPlacementProbabilities <-
     return(probs)
   }
 
+
 CountGenes <-
   function(qtl_list,
            trait,
@@ -293,149 +294,71 @@ CountGenes <-
 
     if (length(trait_gene_list) <= 1) {
       return(trait_gene_list)
-
     }
 
-    # Checking  qtl_list
-    #####
-    if (typeof(qtl_list$LeftmostMarker[1]) == 'double') {
-      qtl_list$LeftmostMarker <-
-        as.integer(qtl_list$LeftmostMarker)
-    }
-    if (typeof(qtl_list$LeftmostMarker[1]) != 'integer' &
-        typeof(qtl_list$LeftmostMarker[1]) != 'numeric') {
-      warning(
-        "qtl_list LeftmostMarker column contains neither integer nor numeric types."
-      )
-    }
-    if (typeof(qtl_list$RightmostMarker[1]) == 'double') {
-      qtl_list$RightmostMarker <-
-        as.integer(qtl_list$RightmostMarker)
-    }
-    if (typeof(qtl_list$RightmostMarker[1]) != 'integer' &
-        typeof(qtl_list$RightmostMarker[1]) != 'numeric') {
-      warning(
-        "qtl_list RightmostMarker column contains neither integer nor numeric types."
-      )
-    }
-    if (typeof(qtl_list$Chromosome[1]) == 'double') {
-      qtl_list$Chromosome <-
-        as.integer(qtl_list$Chromosome)
-    }
-    if (typeof(qtl_list$Chromosome[1]) != 'integer' &
-        typeof(qtl_list$Chromosome[1]) != 'numeric') {
-      warning("qtl_list Chromosome column contains neither integer nor numeric types.")
-    }
-
-    if (mean(nchar(qtl_list$Chromosome)) > 4) {
-      warning(
-        "qtl_list Chromosome number is unusually large. Column may represent confidence interval instead."
-      )
-    }
-
-    if (mean(nchar(qtl_list$LeftmostMarker)) < 4) {
-      warning(
-        "qtl_list LeftmostMarker number is unusually small. Column may represent Chromosome instead."
-      )
-    }
-
-    if (mean(nchar(qtl_list$RightmostMarker)) < 4) {
-      warning(
-        "qtl_list RightmostMarker number is unusually small. Column may represent Chromosome instead."
-      )
-    }
-    if (mean(qtl_list$LeftmostMarker) > mean(qtl_list$RightmostMarker)) {
-      warning(
-        "qtl_list LeftmostMarker is larger than RightmostMarker. Check column order."
-      )
-    }
-    if (typeof(qtl_list$QTL_Type) != 'character') {
-      warning(
-        "qtl_list$QTL_Type should contain character values to ensure appropriate column use."
-      )
-    }
-    if (typeof(qtl_list$Trait) != 'character') {
-      warning(
-        "qtl_list$Trait should contain character values to ensure appropriate column use."
-      )
-    }
-    if (typeof(qtl_list$Treatment) != 'character') {
-      warning(
-        "qtl_list$Treatment should contain character values to ensure appropriate column use."
-      )
-    }
-
-
-    #####
-
-
-    if (as.numeric(as.character(length(qtl_list[, 1]))) > 1) {
-      TraitsandTreatments <-
-        subset(qtl_list, select = c(Trait, Treatment))
-      sepTreatments_QTL_Count <-
+    if (length(qtl_list[, 1]) > 1) {
+      trait_treatment_qtl_count <-
         plyr::ddply(
-          TraitsandTreatments,
+          qtl_list,
           .(
-            TraitsandTreatments$Trait,
-            TraitsandTreatments$Treatment
+            qtl_list$Trait,
+            qtl_list$Treatment
           ),
           nrow
         )
-      colnames(sepTreatments_QTL_Count) <-
-        c("Trait", 'Treatment', 'Frequency')
+      colnames(trait_treatment_qtl_count) <-
+        c("Trait", 'Treatment', 'NumQTL')
 
-
-
-      QTLData <-
-        qtl_list[grep(Trait, TraitsandTreatments$Trait), ]
-      if (length(QTLData$Chromosome) == 0) {
-        return("No QTL found for this trait.")
+      # TODO Is there a reason we don't do this before getting trait_treatment_qtl_count? Might be answered below, just making a note
+      trait_qtl_list <-
+        qtl_list[grep(Trait, qtl_list$Trait), ]
+      if (length(trait_qtl_list[,1]) == 0) {
+        stop("No QTL found for this trait.")
       }
 
-      QTLData$N_QTL <- c(0)
-      count <- c()
-
-      for (identified in 1:length(QTLData$Chromosome)) {
-        sep_Treat_QTL_4_u <-
-          sepTreatments_QTL_Count$Frequency[which(
-            sepTreatments_QTL_Count$Trait == QTLData$Trait[identified] &
-              sepTreatments_QTL_Count$Treatment ==
-              QTLData$Treatment[identified]
+      counts <- numeric(nrows(trait_qtl_list))
+      for (qtl_i in 1:length(trait_qtl_list[,1])) {
+        treatment_count_for_qtl <-
+          trait_treatment_qtl_count$NumQTL[which(
+            (trait_treatment_qtl_count$Trait == trait_qtl_list$Trait[qtl_i]) &
+              (trait_treatment_qtl_count$Treatment == trait_qtl_list$Treatment[qtl_i])
           )]
-        count <- c(count, sep_Treat_QTL_4_u)
+        counts[qtl_i] <- treatment_count_for_qtl
       }
+      trait_qtl_list$NumQTL <- counts
 
-      QTLData$N_QTL <- count
-      QTLData$N_Genes <- c(0)
+      trait_qtl_list$NumGenes <- 0
+      trait_qtl_list$FoundGeneIDs <- 0
 
-      identified_genes <- data.frame(matrix(ncol = length(QTLData)))
-      colnames(identified_genes) <- colnames(QTLData)
+      identified_genes <- data.frame(matrix(ncol = ncol(trait_qtl_list)))
+      colnames(identified_genes) <- colnames(trait_qtl_list)
 
+      for (qtl_i in 1:nrows(trait_qtl_list)) {
+        qtl_chr <- trait_qtl_list$Chromosome[qtl_i]
+        qtl_marker_l <- trait_qtl_list$LeftmostMarker[qtl_i]
+        qtl_marker_r <- trait_qtl_list$RightmostMarker[qtl_i]
 
-      for (i in 1:length(QTLData$Chromosome)) {
-        QTLchromosome <- as.numeric(as.character(QTLData$Chromosome[i]))
-        QTLLCI <- as.numeric(as.character(QTLData$LeftmostMarker[i]))
-        QTLRCI <- as.numeric(as.character(QTLData$RightmostMarker[i]))
-
-        for (Gene in 1:length(trait_gene_list$GeneID)) {
-          if (as.numeric(as.character(trait_gene_list$Chromosome[Gene])) == as.numeric(as.character(QTLchromosome))) {
-            GeneStartSite <- as.numeric(trait_gene_list$Locus[Gene])
-            if (GeneStartSite >= QTLLCI & GeneStartSite <= QTLRCI) {
-              QTLData$N_Genes[i] <-
-                paste0(QTLData$N_Genes[i], " and ", trait_gene_list$GeneID[Gene])
-              identified_genes <- rbind(identified_genes, QTLData[i, ])
-
-            }
+        for (gene_i in 1:nrows(trait_gene_list)) {
+          if (trait_gene_list$Chromosome[gene_i] != qtl_chr) {
+            # This is the "guard clause" I was talking about, makes it so you don't have to nest as many ifs  (TODO remove this note)
+            next
           }
+          gene_locus <- trait_gene_list$Locus[gene_i]
+          if (gene_locus < qtl_marker_l | gene_locus > qtl_marker_r) {
+            next
+          }
+          # TODO I stopped here for now, went a bit farther but got confused by identified_genes and then caught sight of the clock D: oops
+          trait_qtl_list$NumGenes[qtl_i] <- trait_qtl_list$NumGenes[qtl_i] + 1
+          trait_qtl_list$FoundGeneIDs[qtl_i] <-
+            paste0(trait_qtl_list$FoundGeneIDs[qtl_i], " and ", trait_gene_list$GeneID[gene_i])
+          identified_genes <- rbind(identified_genes, trait_qtl_list[qtl_i, ])
+
         }
       }
       identified_genes <- identified_genes[-1, ]
-      identified_genes$Length <-
-        as.numeric(as.character(identified_genes$RightmostMarker)) - as.numeric(as.character(identified_genes$LeftmostMarker))
+      identified_genes$Length <-  # TODO What does this do? Shouldn't Length already be in qtl_list?
+        identified_genes$RightmostMarker - identified_genes$LeftmostMarker
 
-
-      identified_genes$N_Genes <-
-        stringr::str_count(identified_genes$N_Genes, 'and')
       identified_genes <-
         identified_genes[, c(
           "Chromosome",
@@ -445,11 +368,11 @@ CountGenes <-
           'Treatment',
           "Length",
           "QTL_Type",
-          "N_Genes",
-          'N_QTL'
+          "NumGenes",
+          'NumQTL'
         )]
       colnames(identified_genes)[9] <- 'Number_Trait_QTL'
-      colnames(QTLData)[7] <- 'Number_Trait_QTL'
+      colnames(trait_qtl_list)[7] <- 'Number_Trait_QTL'
       identified_genes2 <- identified_genes
 
       if (length(identified_genes[, 1]) > 1) {
@@ -459,21 +382,21 @@ CountGenes <-
             identified_genes2[possible_Duplicates, ] <- 0
           }
         }
-        if (length(which(identified_genes2$N_Genes == 0)) > 0) {
+        if (length(which(identified_genes2$NumGenes == 0)) > 0) {
           CountedIdentifiedGenes <-
-            identified_genes2[-which(identified_genes2$N_Genes == 0), ]
+            identified_genes2[-which(identified_genes2$NumGenes == 0), ]
         } else{
           CountedIdentifiedGenes <- identified_genes2
         }
 
         CountedIdentifiedGenesOutput <- CountedIdentifiedGenes
         NoGenes <-
-          dplyr::setdiff(QTLData[1:7], CountedIdentifiedGenes[1:7])
+          dplyr::setdiff(trait_qtl_list[1:7], CountedIdentifiedGenes[1:7])
 
         if (length(NoGenes$Chromosome) > 0) {
           NoGenes$Length <-
             as.numeric(as.character(NoGenes$RightmostMarker)) - as.numeric(as.character(NoGenes$LeftmostMarker))
-          NoGenes$N_Genes <- 0
+          NoGenes$NumGenes <- 0
           NoGenesOutput <- NoGenes
           colnames(NoGenesOutput) <- c(
             "Chromosome",
@@ -484,7 +407,7 @@ CountGenes <-
             "QTL_Type",
             "Number_Trait_QTL",
             "Length",
-            "N_Genes"
+            "NumGenes"
           )
           colnames(CountedIdentifiedGenesOutput) <-
             c(
@@ -495,7 +418,7 @@ CountGenes <-
               "Treatment",
               "QTL_Type",
               "Number_Trait_QTL",
-              "N_Genes",
+              "NumGenes",
               "Length"
             )
 
@@ -513,12 +436,12 @@ CountGenes <-
       if (length(identified_genes[, 1]) == 1) {
         CountedIdentifiedGenesOutput <- identified_genes[, c(1:5, 7, 9, 8, 6)]
         toCompareID <- CountedIdentifiedGenesOutput[, c(1:7)]
-        toCompareQTLData <- QTLData[, c(1:7)]
+        toCompareQTLData <- trait_qtl_list[, c(1:7)]
         NoGenes <- dplyr::setdiff(toCompareQTLData, toCompareID)
 
 
         if (length(NoGenes$Chromosome) > 0) {
-          NoGenes$N_Genes <- c(0)
+          NoGenes$NumGenes <- c(0)
           NoGenes$Length <-
             as.numeric(as.character(NoGenes$RightmostMarker)) - as.numeric(as.character(NoGenes$LeftmostMarker))
           NoGenesOutput <- NoGenes
@@ -531,7 +454,7 @@ CountGenes <-
             "Treatment",
             "QTL_Type",
             "Number_Trait_QTL",
-            "N_Genes",
+            "NumGenes",
             "Length"
           )
           colnames(CountedIdentifiedGenesOutput) <-
@@ -543,7 +466,7 @@ CountGenes <-
               "Treatment",
               "QTL_Type",
               "Number_Trait_QTL",
-              "N_Genes",
+              "NumGenes",
               "Length"
             )
 
@@ -563,11 +486,13 @@ CountGenes <-
       }
     }
     else{
+      # TODO can we just get rid of this, and use the above branch even when we only have 1 QTL?
+      # Assuming this was originally split out, if not for debugging, then bc R handles one-row dataframes weirdly or something... but maybe we can fix that?
       i = 1
       qtl_list$Length <-
         as.numeric(as.character(qtl_list$RightmostMarker)) - as.numeric(as.character(qtl_list$LeftmostMarker))
-      qtl_list$N_Genes <-
-        as.character(qtl_list$N_Genes)
+      qtl_list$NumGenes <-
+        as.character(qtl_list$NumGenes)
       QTLchromosome <-
         as.numeric(as.character(qtl_list$Chromosome[i]))
       QTLLCI <-
@@ -583,8 +508,8 @@ CountGenes <-
         if (as.numeric(as.character(trait_gene_list$Chromosome[Gene])) == as.numeric(as.character(QTLchromosome))) {
           GeneStartSite <- as.numeric(trait_gene_list$Locus[Gene])
           if (GeneStartSite >= QTLLCI & GeneStartSite <= QTLRCI) {
-            qtl_list$N_Genes[i] <-
-              paste0(qtl_list$N_Genes[i],
+            qtl_list$NumGenes[i] <-
+              paste0(qtl_list$NumGenes[i],
                      " and ",
                      trait_gene_list$GeneID[Gene])
             identified_genes <-
@@ -593,8 +518,8 @@ CountGenes <-
         }
       }
       identified_genes <- identified_genes[-1, ]
-      identified_genes$N_Genes <-
-        stringr::str_count(identified_genes$N_Genes, 'and')
+      identified_genes$NumGenes <-
+        stringr::str_count(identified_genes$NumGenes, 'and')
       identified_genes2 <- identified_genes
       if (length(as.numeric(as.character(identified_genes[, 1]))) > 1) {
         for (possible_Duplicates in 1:(length(identified_genes[, 1]) - 1)) {
@@ -605,9 +530,9 @@ CountGenes <-
         }
 
       }
-      if (length(which(identified_genes2$N_Genes == 0)) > 0) {
+      if (length(which(identified_genes2$NumGenes == 0)) > 0) {
         CountedIdentifiedGenes <-
-          identified_genes2[-which(identified_genes2$N_Genes == 0), ]
+          identified_genes2[-which(identified_genes2$NumGenes == 0), ]
       } else{
         CountedIdentifiedGenes <-
           identified_genes2[, c(
@@ -618,12 +543,12 @@ CountGenes <-
             'Treatment',
             "Length",
             "QTL_Type",
-            "N_Genes",
-            'N_QTL'
+            "NumGenes",
+            'NumQTL'
           )]
         colnames(CountedIdentifiedGenes)[9] <- 'Number_Trait_QTL'
       }
-      CountedIdentifiedGenes$N_QTL <- c(1)
+      CountedIdentifiedGenes$NumQTL <- c(1)
 
       colnames(CountedIdentifiedGenes) <-
         c(
@@ -634,7 +559,7 @@ CountGenes <-
           'Treatment',
           "Length",
           "QTL_Type",
-          "N_Genes",
+          "NumGenes",
           "Number_Trait_QTL"
         )
       return(CountedIdentifiedGenes)
@@ -842,7 +767,7 @@ SPQValidate <- function(qtl_with_metadata,
 
   colnames(output) <- paste0("Simulation_Round_", 1:num_repetitions)
   output$QTLLength <- qtl_of_interest$Length
-  output$ObservedValue <- qtl_of_interest$N_Genes
+  output$ObservedValue <- qtl_of_interest$NumGenes
   simulation_env$SimulationDataFrame <- output
 
   std_devs <- apply(output, MARGIN = 1, FUN = sd)
@@ -862,7 +787,7 @@ SPQValidate <- function(qtl_with_metadata,
     as.data.frame(as.matrix(
       cbind(
         qtl_of_interest$Length,
-        qtl_of_interest$N_Genes,
+        qtl_of_interest$NumGenes,
         rowMeans(output),
         std_devs,
         lower,
