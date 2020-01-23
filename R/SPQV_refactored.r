@@ -211,7 +211,7 @@ QTLPlacementProbabilities <-
 
     poss_positions <-
       as.data.frame(matrix(
-        nrow = nrow(qtl_list,
+        nrow = nrow(qtl_list),
         ncol = 1 + num_chromosomes
       ))
     colnames(poss_positions) <- c("QTLLength", 1:num_chromosomes)
@@ -266,7 +266,7 @@ CountGenes <-
            gene_list,
            marker_list) {
 
-    qtl_list <- validateDf(qtl_list, list(
+    qtl_list  <- validateDf(qtl_list, list(
       c("Chromosome", "integer"),
       c("LeftmostMarker", "integer"),
       c("RightmostMarker", "integer"),
@@ -312,30 +312,27 @@ CountGenes <-
     if (nrow(trait_qtl_list) == 0) {
       stop("No QTL found for this trait.")
     }
-
-    trait_treatment_qtl_count <-
-      plyr::ddply(
-        qtl_list,
-        .(
-          # Keep Trait
-          qtl_list$Trait,
-          qtl_list$Treatment
-        ),
-        nrow
-      )
-    colnames(trait_treatment_qtl_count) <-
-      c("Trait", 'Treatment', 'NumQTL')
-
-    counts <- as.numeric(nrow(trait_qtl_list))
-    for (qtl_i in 1:nrow(trait_qtl_list)) {
-      treatment_count_for_qtl <-
-        trait_treatment_qtl_count$NumQTL[which(
-          (trait_treatment_qtl_count$Trait == trait_qtl_list$Trait[qtl_i]) &
-            (trait_treatment_qtl_count$Treatment == trait_qtl_list$Treatment[qtl_i])
-        )]
-      counts[qtl_i] <- treatment_count_for_qtl
+    
+    
+    metadata_qtl_list<-trait_qtl_list[,c('Trait','Treatment',"Method","ExptType")]
+    groups_of_qtl<-unique(metadata_qtl_list)
+   
+    
+    for(grouping_i in 1:nrow(groups_of_qtl)){
+      tr<-groups_of_qtl$Treatment[grouping_i]
+      meth<-groups_of_qtl$Method[grouping_i]
+      ET<-groups_of_qtl$ExptType[grouping_i]
+      tra<-groups_of_qtl$Trait[grouping_i]
+   
+     indices_for_grouping<-rownames(trait_qtl_list[trait_qtl_list$Treatment==tr & 
+                                                     trait_qtl_list$Trait==tra &
+                                                     trait_qtl_list$ExptType==ET &
+                                                     trait_qtl_list$Method==meth,])
+     trait_qtl_list[indices_for_grouping,'NumQTL']<-paste0('Group',grouping_i)
+   
     }
-    trait_qtl_list$NumQTL <- counts
+    
+    
 
     trait_qtl_list$NumGenes <- 0
     trait_qtl_list$FoundGeneIDs <- 0
@@ -372,8 +369,8 @@ CountGenes <-
       identified_genes[, c(
         colnames(trait_qtl_list)
       )]  # double checking - keep
-    names(identified_genes)[names(identified_genes) == "NumQTL"] <- 'NumberTraitQTL' # TODO change to rename
-    names(trait_qtl_list)[names(trait_qtl_list) == "NumQTL"] <- 'NumberTraitQTL'
+    names(identified_genes)[names(identified_genes) == "NumQTL"] <- 'QTLGroup' # TODO change to rename
+    names(trait_qtl_list)[names(trait_qtl_list) == "NumQTL"] <- 'QTLGroup'
     dedup_identified_genes <- identified_genes
 
     if (nrow(identified_genes) == 0) {
