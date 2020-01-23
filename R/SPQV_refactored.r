@@ -621,12 +621,19 @@ SPQValidate <- function(qtl_list,
 
   for (qtl_i in 1:nrow(qtl_of_interest)) {
     z_value <-
-      qnorm(.025 / qtl_of_interest$NumberTraitQTL[qtl_i],
+      qnorm(.025,
             lower.tail = FALSE)
     mu <- rowMeans(output)[qtl_i]
     upper <- c(upper, mu + z_value * std_devs[qtl_i])
     lower <- c(lower, mu - z_value * std_devs[qtl_i])
   }
+  #dealing with multiple testing
+  for(grouping_i in unique(qtl_of_interest$QTLGroup)){
+    CIstoSum_indices<-which(qtl_of_interest$QTLGroup==grouping_i)
+    upper_sum_of_CIStoSum<-sum(upper[CIstoSum_indices])
+    lower_sum_of_CIStoSum<-sum(lower[CIstoSum_indices])
+  }
+  
 
   conf_ints <-
     as.data.frame(as.matrix(
@@ -636,7 +643,10 @@ SPQValidate <- function(qtl_list,
         rowMeans(output),
         std_devs,
         lower,
-        upper
+        lower_sum_of_CIStoSum,
+        upper,
+        upper_sum_of_CIStoSum
+        
      )
   ))
 
@@ -646,7 +656,9 @@ SPQValidate <- function(qtl_list,
       "Mean",
       "SEM",
       "Lower 95% CI",
-      "Upper 95% CI")
+      "Additive Lower 95% CI",
+      "Upper 95% CI",
+      "Additive Upper 95% CI")
   return(conf_ints)
 }
 
