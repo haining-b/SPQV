@@ -41,8 +41,8 @@ SectionMarkers <- function(marker_list, num_chromosomes) {
     c("Base", "integer")
   ))
 
-  if (typeof(num_chromosomes) != 'integer') {
-    stop("Input num_chromosomes must be of type 'integer'.")
+  if (!(typeof(num_chromosomes) %in% c('integer','double','numeric'))) {
+    stop("Input num_chromosomes must be of type 'integer','double', or 'numeric'.")
   }
 
   #Testing num_chromosomes
@@ -501,8 +501,8 @@ SPQValidate <- function(qtl_list,
     )
   }
 
-  if (typeof(num_repetitions) != 'integer') {
-    stop("num_repetitions must be an integer value (i.e. 1000).")
+  if (!(typeof(num_repetitions) %in% c('integer','double','numeric'))) {
+    stop("num_repetitions must be an numeric,integer, or double value (i.e. 1000).")
   }
   #####
   #####
@@ -530,8 +530,7 @@ SPQValidate <- function(qtl_list,
     subset(gene_list, select = c(ID, Chromosome, Base))
 
 
-  qtl_of_interest <-
-    qtl_of_interest[which(qtl_of_interest$Trait==trait),]
+  #qtl_of_interest <- qtl_of_interest[which(qtl_of_interest$Trait==trait),]
   num_qtl <- length(qtl_of_interest[, 1])
   if (sum(qtl_of_interest$Length) == 0) {
     qtl_of_interest$Length <-
@@ -546,7 +545,7 @@ SPQValidate <- function(qtl_list,
       data = 0
     ))
   pb <- txtProgressBar(0, 1, style = 3)
-  num_chromosomes<-as.integer(length(unique(marker_list$Chromosome)))
+ 
   sectioned_marker_list <-
     SectionMarkers(marker_list = marker_list,
                     num_chromosomes = num_chromosomes)
@@ -560,9 +559,9 @@ SPQValidate <- function(qtl_list,
 
   for (rep_i in 1:num_repetitions) {
     random_gene_list <- dplyr::sample_n(whole_genome_gene_dist, num_genes, replace=FALSE)
-    random_gene_list$EGN <- 0
 
     for (qtl_i in 1:num_qtl) {
+      random_gene_list$EGN <- 0
       if (placement_type == 'centered') {
         qtl_ext_length = qtl_of_interest$Length[qtl_i] / 2
       } else if (placement_type == 'extension') {
@@ -657,3 +656,4 @@ SPQValidate <- function(qtl_list,
       "Upper 95% CI")
   return(conf_ints)
 }
+
