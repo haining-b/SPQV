@@ -628,10 +628,13 @@ SPQValidate <- function(qtl_list,
     lower <- c(lower, mu - z_value * std_devs[qtl_i])
   }
   #dealing with multiple testing
+  upper_sum_of_CIstoSum<-c()
+  lower_sum_of_CIstoSum<-c()
   for(grouping_i in unique(qtl_of_interest$QTLGroup)){
     CIstoSum_indices<-which(qtl_of_interest$QTLGroup==grouping_i)
-    upper_sum_of_CIStoSum<-sum(upper[CIstoSum_indices])
-    lower_sum_of_CIStoSum<-sum(lower[CIstoSum_indices])
+    upper_sum_of_CIstoSum[CIstoSum_indices]<-rep(sum(upper[CIstoSum_indices]),length(CIstoSum_indices))
+    lower_sum_of_CIstoSum[CIstoSum_indices]<-rep(sum(lower[CIstoSum_indices]),length(CIstoSum_indices))
+    
   }
   
 
@@ -643,9 +646,9 @@ SPQValidate <- function(qtl_list,
         rowMeans(output),
         std_devs,
         lower,
-        lower_sum_of_CIStoSum,
+        lower_sum_of_CIstoSum,
         upper,
-        upper_sum_of_CIStoSum
+        upper_sum_of_CIstoSum
         
      )
   ))
