@@ -117,11 +117,10 @@ FilterGeneList <-
     trait_gene_list <- gene_list[which(gene_list$Trait==trait), ]
     trait_gene_list <- unique(trait_gene_list)
 
-    if (length(trait_gene_list$Trait) == 0) {
+    if (nrow(trait_gene_list) == 0) {
       stop('No genes for this trait.')
     }
-    if (placement_type == 'centered' |
-        length(trait_gene_list$Trait) == 1) {
+    if (placement_type == 'centered' | nrow(trait_gene_list) == 1) {
       return(trait_gene_list)
     }
     if (placement_type == 'extension') {
@@ -202,9 +201,9 @@ QTLPlacementProbabilities <-
 
     # Sort chromosomes
     chromosome_size <- chromosome_size[order(as.numeric(chromosome_size$Chromosome)), ]
-    num_chromosomes <- as.numeric(length(chromosome_size[, 1]))
+    num_chromosomes <- as.numeric(nrow(chromosome_size))
 
-    if (length(qtl_list$Length) == 0 | sum(qtl_list$Length) == 0) {
+    if (nrow(qtl_list) == 0 | sum(qtl_list$Length) == 0) {
       qtl_list$Length <-
         qtl_list$RightmostMarker - qtl_list$LeftmostMarker
 
@@ -212,14 +211,14 @@ QTLPlacementProbabilities <-
 
     poss_positions <-
       as.data.frame(matrix(
-        nrow = length(qtl_list$Chromosome),
+        nrow = nrow(qtl_list,
         ncol = 1 + num_chromosomes
       ))
     colnames(poss_positions) <- c("QTLLength", 1:num_chromosomes)
     poss_positions$QTLLength <- qtl_list$Length
 
 
-    for (qtl_i in 1:length(qtl_list$Length)) {
+    for (qtl_i in 1:nrow(qtl_list)) {
 
       if (placement_type == 'centered') {
         qtl_ext_length = qtl_list$Length[qtl_i] / 2
@@ -247,7 +246,7 @@ QTLPlacementProbabilities <-
 
         remaining_markers <-
           rbind(remaining_markers_lr, remaining_markers_rl)
-        length_remaining_markers <- length(remaining_markers[,1])
+        length_remaining_markers <- nrow(remaining_markers)
 
         poss_positions[qtl_i, chr_i + 1] <-
           length_remaining_markers
@@ -304,13 +303,13 @@ CountGenes <-
         marker_list = marker_list
       )
 
-    if (length(trait_gene_list) <= 1) {
+    if (nrow(trait_gene_list) <= 1) {
       return(trait_gene_list)
     }
 
     trait_qtl_list <-
       qtl_list[which(qtl_list$Trait==trait), ]
-    if (length(trait_qtl_list[,1]) == 0) {
+    if (nrow(trait_qtl_list) == 0) {
       stop("No QTL found for this trait.")
     }
 
@@ -328,7 +327,7 @@ CountGenes <-
       c("Trait", 'Treatment', 'NumQTL')
 
     counts <- as.numeric(nrow(trait_qtl_list))
-    for (qtl_i in 1:length(trait_qtl_list[,1])) {
+    for (qtl_i in 1:nrow(trait_qtl_list)) {
       treatment_count_for_qtl <-
         trait_treatment_qtl_count$NumQTL[which(
           (trait_treatment_qtl_count$Trait == trait_qtl_list$Trait[qtl_i]) &
@@ -377,15 +376,15 @@ CountGenes <-
     names(trait_qtl_list)[names(trait_qtl_list) == "NumQTL"] <- 'NumberTraitQTL'
     dedup_identified_genes <- identified_genes
 
-    if (length(identified_genes[, 1]) == 0) {
+    if (nrow(identified_genes) == 0) {
       print(sprintf("No identified genes for trait: %s", trait))
       return(trait_qtl_list)
 
-    } else if (length(identified_genes[, 1]) == 1) {
+    } else if (nrow(identified_genes) == 1) {
       dedup_identified_genes <- identified_genes
 
     } else {
-      for (possible_Duplicates in 1:(length(identified_genes[, 1]) - 1)) {
+      for (possible_Duplicates in 1:(nrow(identified_genes) - 1)) {
         if (all(
           identified_genes[possible_Duplicates, c(1:6)] ==  # TODO replace with col names
           identified_genes[possible_Duplicates + 1, c(1:6)]
@@ -406,7 +405,7 @@ CountGenes <-
       dedup_identified_genes$FoundGeneIDs,
       function(x) gsub("0 and ", "", x)  # TODO make a list instead of string
     )
-    if (length(empty_qtl[,1]) > 0) {
+    if (nrow(empty_qtl) > 0) {
       qtl_gene_counts <-
         rbind(dedup_identified_genes, empty_qtl)
     } else{
@@ -511,7 +510,7 @@ SPQValidate <- function(qtl_list,
     gene_list = gene_list,
     marker_list = marker_list
   )
-  if (length(qtl_of_interest) <= 1) {
+  if (nrow(qtl_of_interest) <= 1) {
     return(qtl_of_interest)
   }
 
@@ -527,13 +526,13 @@ SPQValidate <- function(qtl_list,
 
 
   #qtl_of_interest <- qtl_of_interest[which(qtl_of_interest$Trait==trait),]
-  num_qtl <- length(qtl_of_interest[, 1])
+  num_qtl <- nrow(qtl_of_interest)
   if (sum(qtl_of_interest$Length) == 0) {
     qtl_of_interest$Length <-
       qtl_of_interest$RightmostMarker - qtl_of_interest$LeftmostMarker
   }
-  num_genes <- length(gene_list[, 1])
-  num_chromosomes <- length(chromosome_size[, 1])
+  num_genes <- nrow(gene_list)
+  num_chromosomes <- nrow(chromosome_size)
   output <-
     as.data.frame(matrix(
       nrow = num_qtl,
@@ -587,7 +586,7 @@ SPQValidate <- function(qtl_list,
               chr_marker_positions <= sampled_gene_locus &
               chr_marker_positions >= range_l
           ),]
-        length_markers_l <- length(markers_l[,1])
+        length_markers_l <- nrow(markers_l)
 
         markers_r <-
           markers_on_chromosome[which(
@@ -596,7 +595,7 @@ SPQValidate <- function(qtl_list,
               chr_marker_positions > as.numeric(sampled_gene_locus) &
               chr_marker_positions <= range_r
           ),]
-        length_markers_r <- length(markers_r[,1])
+        length_markers_r <- nrow(markers_r)
 
         num_markers_avail <- length_markers_l + length_markers_r
         num_markers_expect <- num_markers_avail * known_likelihood
@@ -623,7 +622,7 @@ SPQValidate <- function(qtl_list,
   upper <- c()
   lower <- c()
 
-  for (qtl_i in 1:length(qtl_of_interest$Length)) {
+  for (qtl_i in 1:nrow(qtl_of_interest)) {
     z_value <-
       qnorm(.025 / qtl_of_interest$NumberTraitQTL[qtl_i],
             lower.tail = FALSE)
