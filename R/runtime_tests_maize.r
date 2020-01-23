@@ -1,11 +1,11 @@
 setwd("/Users/katyblumer/repos/SPQV")
 
-devtools::document('/Users/katyblumer/repos/SPQV')
+# devtools::document('/Users/katyblumer/repos/SPQV')
 
 library(plyr)
 library(dplyr)
 library(stringr)
-library(SPQV)
+# library(SPQV)
 
 
 placement_type <- "extension"
@@ -22,19 +22,22 @@ wgd <- read.csv("example_data/Maize_WholeGenomeGeneDistribution.csv", stringsAsF
 
 num_reps <- 5
 num_genes <- 10
-qtl_len <- 1e6
+qtl_len <- as.integer(147483647)
 
 # Sample genes
 sampled_genes <- sample_n(gene_list, num_genes, replace=FALSE)
+sampled_genes$ID <- sampled_genes$GeneID
+sampled_genes$Base <- as.integer(sampled_genes$Locus)
+sampled_genes$Trait <- trait
 
 # Make QTL
 valid_qtl_found <- FALSE
 while (!valid_qtl_found) {
   start_marker <- sample_n(markers, size = 1)
   end_base <- start_marker[1, 'Base'] + qtl_len
-  
+
   last_chr_marker <- chromosome_size[
-    which(chromosome_size['Number']==start_marker[1, 'Chromosome']), 
+    which(chromosome_size['Number']==start_marker[1, 'Chromosome']),
     'Last.Marker']
   if (end_base > last_chr_marker) {
     next
@@ -46,11 +49,11 @@ while (!valid_qtl_found) {
       # Same array twice, since it behaves differently if only 1 qtl?
       c(c(
         start_marker[1, 'Chromosome'], start_marker[1, 'Base'], end_base,
-        "test_trait", "test_treatment", "test_method", "test_expt_type", qtl_len
-      ), 
+        trait, "test_treatment", "test_method", "test_expt_type", qtl_len
+      ),
       c(
         start_marker[1, 'Chromosome'], start_marker[1, 'Base'], end_base,
-        "test_trait", "test_treatment", "test_method", "test_expt_type", qtl_len
+        trait, "test_treatment", "test_method", "test_expt_type", qtl_len
       ) ),
       dim = c(length(colnames(qtl)), 2)
     )),
@@ -59,21 +62,45 @@ while (!valid_qtl_found) {
   colnames(sample_qtl) <- colnames(qtl)
 }
 sample_qtl$Chromosome <- as.integer(sample_qtl$Chromosome)
-sample_qtl$Leftmost_Marker <- as.integer(sample_qtl$Leftmost_Marker)
-sample_qtl$Rightmost_Marker <- as.integer(sample_qtl$Rightmost_Marker)
+sample_qtl$LeftmostMarker <- as.integer(sample_qtl$Leftmost_Marker)
+sample_qtl$RightmostMarker <- as.integer(sample_qtl$Rightmost_Marker)
+sample_qtl$ExptType <- as.character(sample_qtl$Expt_Type)
 sample_qtl$Length <- as.integer(sample_qtl$Length)
+
+# Fix chromosome_size
+chromosome_size$Chromosome <- chromosome_size$Number
+chromosome_size$LeftmostMarker <- chromosome_size$First.Marker
+chromosome_size$RightmostMarker <- chromosome_size$Last.Marker
+
+# Fix wgd
+wgd$GeneMiddle <- as.integer(wgd$GeneMiddle)
 
 
 my_env <- new.env()
 
 TEMP_output <- SPQValidate(
-  QTL_with_Metadata = sample_qtl,
-  Trait = trait,
-  number_repetitions = num_reps,
+  qtl_list = sample_qtl,
+  trait = trait,
+  num_repetitions = num_reps,
   gene_list = sampled_genes,
   chromosome_size = chromosome_size,
-  MarkerList = markers,
-  WholeGenomeGeneDistribution = wgd,
-  Placement_Type = placement_type,
-  Simulation_Environment = my_env
+  marker_list = markers,
+  whole_genome_gene_dist = wgd,
+  placement_type = placement_type,
+  simulation_env = my_env
 )
+TEMP_output
+# validateDf(sample_qtl, list(
+#   c("hromosome", "integer"),
+#   c("Chromosome", "character")
+#   ))
+#
+# TEMP = list(
+#   c("hromosome", "integer"),
+#   c("Chromosome", "character")
+# )
+# # x[1] for (x in TEMP)
+# TEMP
+# append(TEMP, 5)
+#
+# sprintf("TEST ------ %s", paste(colnames(sample_qtl), collapse = ", "))

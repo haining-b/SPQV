@@ -1,11 +1,6 @@
-# Naming case conventions:
-#  - exported functions: UpperCamelCase
-#  - private functions: lowerCamelCase
-#  - variables: snake_case, no caps
-#  - constants (rare): SNAKE_CASE, all caps
-#  - Expected dataframe cols: UpperCamelCase
 
 validateDf <- function(df, req_cols, return_stripped = True) {
+  req_names <- c()
   for (col in req_cols) {
     req_name <- col[1]
     req_type <- col[2]
@@ -29,13 +24,30 @@ validateDf <- function(df, req_cols, return_stripped = True) {
         )
       )
     }
+    req_names <- c(req_names, req_name)
   }
+  return(df[, req_names])
 }
 
 
-# TODO add back docs
+#' Create chromosome specific matrices of QTL mapping marker locations
+#'
+#'
+#' This function produces N matrices containing the locations of the
+#' markers used in a QTL mapping experiment, where N refers to the number
+#' of chromosomes in the organism of interest.
+#'
+#' @param number_chromosomes Numeric value refering the the number
+#' of chromosomes in the organism of interest
+#'
+#' @param MarkerList A 3 column matrix containing the marker loci
+#' (ID, Chromosome, and Base)).
+#'
+#' @return N matrices of marker loci
+#' @return Sectioned_List, a list of the names of the N matrices of marker loci
+#' @export
 SectionMarkers <- function(marker_list, num_chromosomes) {
-  validateDf(marker_list, list(
+  marker_list <- validateDf(marker_list, list(
     c("ID", "character"),
     c("Chromosome", "integer"),
     c("Base", "integer")
@@ -89,14 +101,14 @@ FilterGeneList <-
       )
     }
 
-    validateDf(gene_list, list(
+    gene_list <- validateDf(gene_list, list(
       c("ID", "character"),
       c("Trait", "character"),
       c("Chromosome", "integer"),
       c("Base", "integer")
     ))
 
-    validateDf(marker_list, list(
+    marker_list <- validateDf(marker_list, list(
       c("ID", "character"),
       c("Chromosome", "integer"),
       c("Base", "integer")
@@ -159,7 +171,7 @@ QTLPlacementProbabilities <-
            sectioned_marker_list,
            chromosome_size) {
 
-    validateDf(qtl_list, list(
+    qtl_list <- validateDf(qtl_list, list(
       c("Chromosome", "integer"),
       c("LeftmostMarker", "integer"),
       c("RightmostMarker", "integer"),
@@ -170,7 +182,7 @@ QTLPlacementProbabilities <-
       c("Length", "integer")
     ))
 
-    validateDf(chromosome_size, list(
+    chromosome_size <- validateDf(chromosome_size, list(
       c("Chromosome", "integer"),
       c("LeftmostMarker", "integer"),
       c("RightmostMarker", "integer"),
@@ -255,7 +267,7 @@ CountGenes <-
            gene_list,
            marker_list) {
 
-    validateDf(qtl_list, list(
+    qtl_list <- validateDf(qtl_list, list(
       c("Chromosome", "integer"),
       c("LeftmostMarker", "integer"),
       c("RightmostMarker", "integer"),
@@ -295,129 +307,113 @@ CountGenes <-
     if (length(trait_gene_list) <= 1) {
       return(trait_gene_list)
     }
-    
+
     trait_qtl_list <-
       qtl_list[which(qtl_list$Trait==trait), ]
     if (length(trait_qtl_list[,1]) == 0) {
       stop("No QTL found for this trait.")
     }
 
-    if (length(qtl_list[, 1]) > 1) {
-      trait_treatment_qtl_count <-
-        plyr::ddply(
-          qtl_list,
-          .(
-            qtl_list$Trait,
-            qtl_list$Treatment
-          ),
-          nrow
-        )
-      colnames(trait_treatment_qtl_count) <-
-        c("Trait", 'Treatment', 'NumQTL')
+    trait_treatment_qtl_count <-
+      plyr::ddply(
+        qtl_list,
+        .(
+          # Keep Trait
+          qtl_list$Trait,
+          qtl_list$Treatment
+        ),
+        nrow
+      )
+    colnames(trait_treatment_qtl_count) <-
+      c("Trait", 'Treatment', 'NumQTL')
 
-      counts <- as.numeric(nrow(trait_qtl_list))
-      for (qtl_i in 1:length(trait_qtl_list[,1])) {
-        treatment_count_for_qtl <-
-          trait_treatment_qtl_count$NumQTL[which(
-            (trait_treatment_qtl_count$Trait == trait_qtl_list$Trait[qtl_i]) &
-              (trait_treatment_qtl_count$Treatment == trait_qtl_list$Treatment[qtl_i])
-          )]
-        counts[qtl_i] <- treatment_count_for_qtl
-      }
-      trait_qtl_list$NumQTL <- counts
-
-      trait_qtl_list$NumGenes <- 0
-      trait_qtl_list$FoundGeneIDs <- 0
-
-      identified_genes <- data.frame(matrix(ncol = ncol(trait_qtl_list)))
-      colnames(identified_genes) <- colnames(trait_qtl_list)
-
-      for (qtl_i in 1:nrow(trait_qtl_list)) {
-        qtl_chr <- trait_qtl_list$Chromosome[qtl_i]
-        qtl_marker_l <- trait_qtl_list$LeftmostMarker[qtl_i]
-        qtl_marker_r <- trait_qtl_list$RightmostMarker[qtl_i]
-
-        for (gene_i in 1:nrow(trait_gene_list)) {
-          if (trait_gene_list$Chromosome[gene_i] != qtl_chr) {
-            # This is the "guard clause" I was talking about, makes
-            #it so you don't have to nest as many ifs  (TODO remove this note)
-            next
-          }
-          gene_locus <- trait_gene_list$Base[gene_i]
-          if (gene_locus < qtl_marker_l | gene_locus > qtl_marker_r) {
-            next
-          }
-          # TODO I stopped here for now, went a bit farther but
-          # got confused by identified_genes and then caught sight of the clock D: oops
-          trait_qtl_list$NumGenes[qtl_i] <- trait_qtl_list$NumGenes[qtl_i] + 1
-          trait_qtl_list$FoundGeneIDs[qtl_i] <-
-            paste0(trait_qtl_list$FoundGeneIDs[qtl_i], " and ", trait_gene_list$ID[gene_i])
-          identified_genes <- rbind(identified_genes, trait_qtl_list[qtl_i, ])
-
-        }
-      }
-      identified_genes <- identified_genes[-1, ]
-
-     
-      identified_genes <-
-        identified_genes[, c(
-        colnames(trait_qtl_list)
+    counts <- as.numeric(nrow(trait_qtl_list))
+    for (qtl_i in 1:length(trait_qtl_list[,1])) {
+      treatment_count_for_qtl <-
+        trait_treatment_qtl_count$NumQTL[which(
+          (trait_treatment_qtl_count$Trait == trait_qtl_list$Trait[qtl_i]) &
+            (trait_treatment_qtl_count$Treatment == trait_qtl_list$Treatment[qtl_i])
         )]
-      names(identified_genes)[names(identified_genes) == "NumQTL"] <- 'Number_Trait_QTL'
-      names(trait_qtl_list)[names(trait_qtl_list) == "NumQTL"] <- 'Number_Trait_QTL'
-      temp_identified_genes <- identified_genes
+      counts[qtl_i] <- treatment_count_for_qtl
+    }
+    trait_qtl_list$NumQTL <- counts
 
-      # lol I have no self control I rearranged these if branches --
-      # it seemed that most of the stuff in the two branches was identical
-      # (length(identified_genes[, 1]) == 1 vs. length(identified_genes[, 1]) > 1),
-      # but I might have misunderstood, so here's a diff of what the two branches looked like
-      # before my change: https://www.diffchecker.com/KXOBTkTS       (TODO delete this comment)
-      # No u didn't but I was having so much and such varied trouble with this stupid function that
-      # I just left it when it started working
-      
-      if (length(identified_genes[, 1]) == 0) {
-        return("No identified genes for this trait")
+    trait_qtl_list$NumGenes <- 0
+    trait_qtl_list$FoundGeneIDs <- 0
 
-      } else if (length(identified_genes[, 1]) == 1) {
-        temp_identified_genes <- identified_genes
+    identified_genes <- data.frame(matrix(ncol = ncol(trait_qtl_list)))
+    colnames(identified_genes) <- colnames(trait_qtl_list)
 
-      } else {
-        for (possible_Duplicates in 1:(length(identified_genes[, 1]) - 1)) {
-          if (all(
-            identified_genes[possible_Duplicates, c(1:6)] ==
-            identified_genes[possible_Duplicates + 1, c(1:6)]
-          )) {
-            temp_identified_genes[possible_Duplicates, ] <- 0
-          }
+    for (qtl_i in 1:nrow(trait_qtl_list)) {
+      qtl_chr <- trait_qtl_list$Chromosome[qtl_i]
+      qtl_marker_l <- trait_qtl_list$LeftmostMarker[qtl_i]
+      qtl_marker_r <- trait_qtl_list$RightmostMarker[qtl_i]
+
+      for (gene_i in 1:nrow(trait_gene_list)) {
+        if (trait_gene_list$Chromosome[gene_i] != qtl_chr) {
+          next
         }
-        if (length(which(temp_identified_genes$NumGenes == 0)) > 0) {
-          temp_identified_genes <-
-            temp_identified_genes[-which(temp_identified_genes$NumGenes == 0), ]
-        } 
+        gene_locus <- trait_gene_list$Base[gene_i]
+        if (gene_locus < qtl_marker_l | gene_locus > qtl_marker_r) {
+          next
+        }
+        # TODO I stopped here for now, went a bit farther but
+        # got confused by identified_genes and then caught sight of the clock D: oops
+        trait_qtl_list$NumGenes[qtl_i] <- trait_qtl_list$NumGenes[qtl_i] + 1
+        trait_qtl_list$FoundGeneIDs[qtl_i] <-
+          paste0(trait_qtl_list$FoundGeneIDs[qtl_i], " and ", trait_gene_list$ID[gene_i])
+        identified_genes <- rbind(identified_genes, trait_qtl_list[qtl_i, ])
 
-        #CountedIdentifiedGenesOutput <- CountedIdentifiedGenes
       }
-   
-     
+    }
+    identified_genes <- identified_genes[-1, ]  # remove initial NA row
 
-      NoGenes <-
-        dplyr::setdiff(trait_qtl_list, temp_identified_genes)
-      
-      temp_identified_genes$FoundGeneIDs<- sapply(
-        temp_identified_genes$FoundGeneIDs, 
-        function(x) gsub("0 and ", "", x)
-      )  
-      if (length(NoGenes$Chromosome) > 0) {
-        final_IDd_genes <-
-          rbind(temp_identified_genes, NoGenes)
-      } else{
-        final_IDd_genes <- temp_identified_genes
+
+    identified_genes <-
+      identified_genes[, c(
+        colnames(trait_qtl_list)
+      )]  # double checking - keep
+    names(identified_genes)[names(identified_genes) == "NumQTL"] <- 'NumberTraitQTL' # TODO change to rename
+    names(trait_qtl_list)[names(trait_qtl_list) == "NumQTL"] <- 'NumberTraitQTL'
+    dedup_identified_genes <- identified_genes
+
+    if (length(identified_genes[, 1]) == 0) {
+      print(sprintf("No identified genes for trait: %s", trait))
+      return(trait_qtl_list)
+
+    } else if (length(identified_genes[, 1]) == 1) {
+      dedup_identified_genes <- identified_genes
+
+    } else {
+      for (possible_Duplicates in 1:(length(identified_genes[, 1]) - 1)) {
+        if (all(
+          identified_genes[possible_Duplicates, c(1:6)] ==  # TODO replace with col names
+          identified_genes[possible_Duplicates + 1, c(1:6)]
+        )) {
+          dedup_identified_genes[possible_Duplicates, ] <- 0
+        }
       }
-
-      return(final_IDd_genes)
-
+      if (length(which(dedup_identified_genes$NumGenes == 0)) > 0) {
+        dedup_identified_genes <-
+          dedup_identified_genes[-which(dedup_identified_genes$NumGenes == 0), ]
+      }
     }
 
+    empty_qtl <-
+      dplyr::setdiff(trait_qtl_list, dedup_identified_genes)
+
+    dedup_identified_genes$FoundGeneIDs<- sapply(
+      dedup_identified_genes$FoundGeneIDs,
+      function(x) gsub("0 and ", "", x)  # TODO make a list instead of string
+    )
+    if (length(empty_qtl[,1]) > 0) {
+      qtl_gene_counts <-
+        rbind(dedup_identified_genes, empty_qtl)
+    } else{
+      qtl_gene_counts <- dedup_identified_genes
+    }
+
+    return(qtl_gene_counts)
   }
 
 
@@ -436,7 +432,7 @@ SPQValidate <- function(qtl_list,
   ######Checking inputs#######
   ############################
 
-  validateDf(qtl_list, list(
+  qtl_list <- validateDf(qtl_list, list(
     c("Chromosome", "integer"),
     c("LeftmostMarker", "integer"),
     c("RightmostMarker", "integer"),
@@ -447,27 +443,27 @@ SPQValidate <- function(qtl_list,
     c("Length", "integer")
   ))
 
-  validateDf(gene_list, list(
+  gene_list <- validateDf(gene_list, list(
     c("ID", "character"),
     c("Trait", "character"),
     c("Chromosome", "integer"),
     c("Base", "integer")
   ))
 
-  validateDf(marker_list, list(
+  marker_list <- validateDf(marker_list, list(
     c("ID", "character"),
     c("Chromosome", "integer"),
     c("Base", "integer")
   ))
 
-  validateDf(chromosome_size, list(
+  chromosome_size <- validateDf(chromosome_size, list(
     c("Chromosome", "integer"),
     c("LeftmostMarker", "integer"),
     c("RightmostMarker", "integer"),
     c("Length", "integer")
   ))
 
-  validateDf(whole_genome_gene_dist, list(
+  whole_genome_gene_dist <- validateDf(whole_genome_gene_dist, list(
     c("Chromosome", "integer"),
     c("GeneStart", "integer"),
     c("GeneEnd", "integer"),
@@ -545,11 +541,11 @@ SPQValidate <- function(qtl_list,
       data = 0
     ))
   pb <- txtProgressBar(0, 1, style = 3)
- 
+
   sectioned_marker_list <-
     SectionMarkers(marker_list = marker_list,
                     num_chromosomes = num_chromosomes)
-  
+
   qtl_probs <- QTLPlacementProbabilities(
     placement_type = placement_type,
     qtl_list = qtl_of_interest,
@@ -604,7 +600,8 @@ SPQValidate <- function(qtl_list,
 
         num_markers_avail <- length_markers_l + length_markers_r
         num_markers_expect <- num_markers_avail * known_likelihood
-        if (length(num_markers_expect) == 0) {  # TODO is this necessary?
+        # Sometimes one of the multiplicands is of type 'levels' for some reason and then num_markers_expect is NA
+        if (length(num_markers_expect) == 0) {
           num_markers_expect <- 0
         }
         random_gene_list$EGN[gene_i] <-
@@ -619,7 +616,7 @@ SPQValidate <- function(qtl_list,
   }
 
   colnames(output) <- paste0("Simulation_Round_", 1:num_repetitions)
-  
+
   simulation_env$SimulationDataFrame <- output
 
   std_devs <- apply(output, MARGIN = 1, FUN = sd)
@@ -628,13 +625,13 @@ SPQValidate <- function(qtl_list,
 
   for (qtl_i in 1:length(qtl_of_interest$Length)) {
     z_value <-
-      qnorm(.025 / qtl_of_interest$Number_Trait_QTL[qtl_i],
+      qnorm(.025 / qtl_of_interest$NumberTraitQTL[qtl_i],
             lower.tail = FALSE)
     mu <- rowMeans(output)[qtl_i]
     upper <- c(upper, mu + z_value * std_devs[qtl_i])
     lower <- c(lower, mu - z_value * std_devs[qtl_i])
   }
-  
+
   conf_ints <-
     as.data.frame(as.matrix(
       cbind(
