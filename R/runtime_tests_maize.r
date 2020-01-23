@@ -20,7 +20,7 @@ chromosome_size <- read.csv("example_data/Maize_Chromosome_Size.csv", stringsAsF
 wgd <- read.csv("example_data/Maize_WholeGenomeGeneDistribution.csv", stringsAsFactors = FALSE)
 
 
-num_reps <- 5
+num_reps <- 100
 num_genes <- 10
 qtl_len <- as.integer(147483647)
 
@@ -47,15 +47,11 @@ while (!valid_qtl_found) {
   sample_qtl <- as.data.frame(
     t(array(
       # Same array twice, since it behaves differently if only 1 qtl?
-      c(c(
-        start_marker[1, 'Chromosome'], start_marker[1, 'Base'], end_base,
-        trait, "test_treatment", "test_method", "test_expt_type", qtl_len
-      ),
       c(
         start_marker[1, 'Chromosome'], start_marker[1, 'Base'], end_base,
         trait, "test_treatment", "test_method", "test_expt_type", qtl_len
-      ) ),
-      dim = c(length(colnames(qtl)), 2)
+      ),
+      dim = c(length(colnames(qtl)), 1)
     )),
     stringsAsFactors = FALSE
   )
@@ -90,17 +86,3 @@ TEMP_output <- SPQValidate(
   simulation_env = my_env
 )
 TEMP_output
-# validateDf(sample_qtl, list(
-#   c("hromosome", "integer"),
-#   c("Chromosome", "character")
-#   ))
-#
-# TEMP = list(
-#   c("hromosome", "integer"),
-#   c("Chromosome", "character")
-# )
-# # x[1] for (x in TEMP)
-# TEMP
-# append(TEMP, 5)
-#
-# sprintf("TEST ------ %s", paste(colnames(sample_qtl), collapse = ", "))
