@@ -312,27 +312,27 @@ CountGenes <-
     if (nrow(trait_qtl_list) == 0) {
       stop("No QTL found for this trait.")
     }
-    
-    
+
+
     metadata_qtl_list<-trait_qtl_list[,c('Trait','Treatment',"Method","ExptType")]
     groups_of_qtl<-unique(metadata_qtl_list)
-   
-    
+
+
     for(grouping_i in 1:nrow(groups_of_qtl)){
       tr<-groups_of_qtl$Treatment[grouping_i]
       meth<-groups_of_qtl$Method[grouping_i]
       ET<-groups_of_qtl$ExptType[grouping_i]
       tra<-groups_of_qtl$Trait[grouping_i]
-   
-     indices_for_grouping<-rownames(trait_qtl_list[trait_qtl_list$Treatment==tr & 
+
+     indices_for_grouping<-rownames(trait_qtl_list[trait_qtl_list$Treatment==tr &
                                                      trait_qtl_list$Trait==tra &
                                                      trait_qtl_list$ExptType==ET &
                                                      trait_qtl_list$Method==meth,])
      trait_qtl_list[indices_for_grouping,'NumQTL']<-paste0('Group',grouping_i)
-   
+
     }
-    
-    
+
+
 
     trait_qtl_list$NumGenes <- 0
     trait_qtl_list$FoundGeneIDs <- 0
@@ -381,12 +381,12 @@ CountGenes <-
       dedup_identified_genes <- identified_genes
 
     } else {
-      for (possible_Duplicates in 1:(nrow(identified_genes) - 1)) {
+      for (possible_duplicates in 1:(nrow(identified_genes) - 1)) {
         if (all(
-          identified_genes[possible_Duplicates, c(1:6)] ==  # TODO replace with col names
-          identified_genes[possible_Duplicates + 1, c(1:6)]
+          identified_genes[possible_duplicates, c(1:6)] ==  # TODO replace with col names
+          identified_genes[possible_duplicates + 1, c(1:6)]
         )) {
-          dedup_identified_genes[possible_Duplicates, ] <- 0
+          dedup_identified_genes[possible_duplicates, ] <- 0
         }
       }
       if (length(which(dedup_identified_genes$NumGenes == 0)) > 0) {
@@ -423,7 +423,8 @@ SPQValidate <- function(qtl_list,
                         marker_list,
                         whole_genome_gene_dist,
                         chromosome_size,
-                        simulation_env) {
+                        simulation_env,
+                        progress_bar=TRUE) {
   ############################
   ######Checking inputs#######
   ############################
@@ -536,7 +537,10 @@ SPQValidate <- function(qtl_list,
       ncol = num_repetitions,
       data = 0
     ))
-  pb <- txtProgressBar(0, 1, style = 3)
+  if (progress_bar) {
+    pb <- txtProgressBar(0, 1, style = 3)
+  }
+
 
   sectioned_marker_list <-
     SectionMarkers(marker_list = marker_list,
@@ -607,7 +611,9 @@ SPQValidate <- function(qtl_list,
       sim_egn <- sum(random_gene_list$EGN)
       output[qtl_i, rep_i] <- sim_egn
 
-      setTxtProgressBar(pb, qtl_i + ((rep_i-1)*num_qtl) / (num_qtl * num_repetitions))
+      if (progress_bar) {
+        setTxtProgressBar(pb, qtl_i + ((rep_i-1)*num_qtl) / (num_qtl * num_repetitions))
+      }
     }
   }
 
@@ -634,9 +640,9 @@ SPQValidate <- function(qtl_list,
     CIstoSum_indices<-which(qtl_of_interest$QTLGroup==grouping_i)
     upper_sum_of_CIstoSum[CIstoSum_indices]<-rep(sum(upper[CIstoSum_indices]),length(CIstoSum_indices))
     lower_sum_of_CIstoSum[CIstoSum_indices]<-rep(sum(lower[CIstoSum_indices]),length(CIstoSum_indices))
-    
+
   }
-  
+
 
   conf_ints <-
     as.data.frame(as.matrix(
@@ -649,7 +655,7 @@ SPQValidate <- function(qtl_list,
         lower_sum_of_CIstoSum,
         upper,
         upper_sum_of_CIstoSum
-        
+
      )
   ))
 
