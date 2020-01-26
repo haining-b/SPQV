@@ -135,7 +135,12 @@ colnames(plot_df) <- c("Genes.Markers.QTL", "Milliseconds")
 plot_df$Milliseconds <- plot_df$Milliseconds / 1e6  # Original is in nanoseconds
 p <- ggplot(plot_df, aes(x=Genes.Markers.QTL, y=Milliseconds)) + geom_violin() + coord_flip()
 p + stat_summary(fun.data=mean_sdl, geom="pointrange", color="red") + ylim(-1, 50)
-p + stat_summary(fun.data=mean_sdl, geom="pointrange", color="red") + ylim(-1, 30)
+p + stat_summary(fun.data=mean_sdl, geom="pointrange", color="red") +
+  ylab("Milliseconds")+
+  ylim(-1, 30)+
+  xlab("Genes, Markers, QTL")+ 
+  theme_classic()
+#theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 medians <- data.frame(apply(mbm_df, MARGIN = 2, FUN = median))
 colnames(medians) <- c('median')
