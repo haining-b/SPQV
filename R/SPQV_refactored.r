@@ -235,7 +235,6 @@ QTLPlacementProbabilities <-
         first_avail_marker <- first_marker + qtl_ext_length
         last_avail_marker <- last_marker - qtl_ext_length
 
-        #this line is the bug - can't just pick a df out of a list like this
         chr_markers <-sectioned_marker_list[chr_i]
         chr_markers<-chr_markers[[1]]
 
@@ -353,8 +352,6 @@ CountGenes <-
         if (gene_locus < qtl_marker_l | gene_locus > qtl_marker_r) {
           next
         }
-        # TODO I stopped here for now, went a bit farther but
-        # got confused by identified_genes and then caught sight of the clock D: oops
         trait_qtl_list$NumGenes[qtl_i] <- trait_qtl_list$NumGenes[qtl_i] + 1
         trait_qtl_list$FoundGeneIDs[qtl_i] <-
           paste0(trait_qtl_list$FoundGeneIDs[qtl_i], " and ", trait_gene_list$ID[gene_i])
@@ -374,7 +371,7 @@ CountGenes <-
     dedup_identified_genes <- identified_genes
 
     if (nrow(identified_genes) == 0) {
-      print(sprintf("No identified genes for trait: %s", trait))
+      # print(sprintf("No identified genes for trait: %s", trait))
       return(trait_qtl_list)
 
     } else if (nrow(identified_genes) == 1) {
@@ -437,14 +434,14 @@ SPQValidate <- function(qtl_list,
     c("Treatment", "character"),
     c("Method", "character"),
     c("ExptType", "character"),
-    c("Length", "integer")
+    c("Length", "integer")  # TODO is this superfluous? (or is Rightmost/leftmost? prob not bc need real gene count, but do we return that?)
   ))
 
-  gene_list <- validateDf(gene_list, list(
+  gene_list <- validateDf(gene_list, list(  # TODO maybe rename as known_gene_list
     c("ID", "character"),
     c("Trait", "character"),
     c("Chromosome", "integer"),
-    c("Base", "integer")
+    c("Base", "integer")  # TODO Maybe should be clearer that this is center
   ))
 
   marker_list <- validateDf(marker_list, list(
@@ -455,16 +452,16 @@ SPQValidate <- function(qtl_list,
 
   chromosome_size <- validateDf(chromosome_size, list(
     c("Chromosome", "integer"),
-    c("LeftmostMarker", "integer"),
-    c("RightmostMarker", "integer"),
+    c("LeftmostMarker", "integer"),  # TODO Actually we should be able to get this from marker_list - why here?
+    c("RightmostMarker", "integer"),  # TODO superfluous? ditto w/comments below
     c("Length", "integer")
   ))
 
-  whole_genome_gene_dist <- validateDf(whole_genome_gene_dist, list(
+  whole_genome_gene_dist <- validateDf(whole_genome_gene_dist, list(  # rename as whole_genome_gene_list
     c("Chromosome", "integer"),
-    c("GeneStart", "integer"),
-    c("GeneEnd", "integer"),
-    c("GeneMiddle", "integer")
+    c("GeneStart", "integer"),  # Def superfluous - never used
+    c("GeneEnd", "integer"), # Def superfluous - never used
+    c("GeneMiddle", "integer")  # see above - rename to locus?
   ))
 
   # TODO check that loci are in bp and not in cM?
@@ -509,7 +506,11 @@ SPQValidate <- function(qtl_list,
     marker_list = marker_list
   )
   if (nrow(qtl_of_interest) <= 1) {
-    return(qtl_of_interest)
+    # TODO Why does everything become "double" if there's only one row?
+    qtl_of_interest$Chromosome <- as.integer(qtl_of_interest$Chromosome)
+    qtl_of_interest$Length <- as.integer(qtl_of_interest$Length)
+    qtl_of_interest$LeftmostMarker <- as.integer(qtl_of_interest$LeftmostMarker)
+    qtl_of_interest$RightmostMarker <- as.integer(qtl_of_interest$RightmostMarker)
   }
 
 
