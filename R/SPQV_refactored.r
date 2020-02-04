@@ -435,7 +435,7 @@ SPQValidate <- function(qtl_list,
     c("Method", "character"),
     c("ExptType", "character"),
     c("Length", "integer")  # TODO is this superfluous? (or is Rightmost/leftmost? prob not bc need real gene count, but do we return that?)
-  ))
+  ))# need it later, doesn't need to be in the list at the start.
 
   gene_list <- validateDf(gene_list, list(  # TODO maybe rename as known_gene_list
     c("ID", "character"),
@@ -452,15 +452,15 @@ SPQValidate <- function(qtl_list,
 
   chromosome_size <- validateDf(chromosome_size, list(
     c("Chromosome", "integer"),
-    c("LeftmostMarker", "integer"),  # TODO Actually we should be able to get this from marker_list - why here?
+    c("LeftmostMarker", "integer"),  # TODO Actually we should be able to get this from marker_list - why here? #idk this is a holdover from the dawn of time
     c("RightmostMarker", "integer"),  # TODO superfluous? ditto w/comments below
     c("Length", "integer")
   ))
 
-  whole_genome_gene_dist <- validateDf(whole_genome_gene_dist, list(  # rename as whole_genome_gene_list
+  whole_genome_gene_dist <- validateDf(whole_genome_gene_dist, list(  # rename as whole_genome_gene_list #eh it's a df though
     c("Chromosome", "integer"),
-    c("GeneStart", "integer"),  # Def superfluous - never used
-    c("GeneEnd", "integer"), # Def superfluous - never used
+    c("GeneStart", "integer"),  # Def superfluous - never used #yep
+    c("GeneEnd", "integer"), # Def superfluous - never used #yep
     c("GeneMiddle", "integer")  # see above - rename to locus?
   ))
 
@@ -602,6 +602,8 @@ SPQValidate <- function(qtl_list,
         num_markers_avail <- length_markers_l + length_markers_r
         num_markers_expect <- num_markers_avail * known_likelihood
         # Sometimes one of the multiplicands is of type 'levels' for some reason and then num_markers_expect is NA
+        #jfc I hate levels
+        #I think I had an as.numeric() in here somewhere to resolve that
         if (length(num_markers_expect) == 0) {
           num_markers_expect <- 0
         }
@@ -637,10 +639,26 @@ SPQValidate <- function(qtl_list,
   #dealing with multiple testing
   upper_sum_of_CIstoSum<-c()
   lower_sum_of_CIstoSum<-c()
+  #gotta do the triathalon math
+  #as in https://stats.stackexchange.com/questions/223924/how-to-add-up-partial-confidence-intervals-to-create-a-total-confidence-interval?fbclid=IwAR0mz3ypdVGQjopYytJnfrXA6o50MJyZ0OAxnUHcwE7kBRKbGqGiEUY6mSY
+  
   for(grouping_i in unique(qtl_of_interest$QTLGroup)){
     CIstoSum_indices<-which(qtl_of_interest$QTLGroup==grouping_i)
-    upper_sum_of_CIstoSum[CIstoSum_indices]<-rep(sum(upper[CIstoSum_indices]),length(CIstoSum_indices))
-    lower_sum_of_CIstoSum[CIstoSum_indices]<-rep(sum(lower[CIstoSum_indices]),length(CIstoSum_indices))
+    center_list<-c()
+    radius_list<-c()
+    for (distribution_i in CIstoSum_indices){
+      dist_ctr<-upper[CIstoSum_indices]-lower[CIstoSum_indices]
+      center_list<-c(center_list,dist_ctr)
+      dist_radius<-upper[CIstoSum_indices]-dist_ctr
+      sqr_rad<-dist_radius^2
+      radius_list<-c(radius_list,sqr_rad)
+    }
+    adjusted_center<-mean(center_list)
+    adjusted_radius<-sqrt(sum(radius_list))
+    
+    
+    upper_sum_of_CIstoSum[CIstoSum_indices]<-rep(sum(adjusted_center,adjusted_radius),length(CIstoSum_indices))
+    lower_sum_of_CIstoSum[CIstoSum_indices]<-rep((adjusted_center-adjusted_radius),length(CIstoSum_indices))
 
   }
 
