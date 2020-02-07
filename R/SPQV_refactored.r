@@ -457,7 +457,7 @@ SPQValidate <- function(qtl_list,
     c("Length", "integer")
   ))
 
-  whole_genome_gene_dist <- validateDf(whole_genome_gene_dist, list(  # rename as whole_genome_gene_list #eh it's a df though
+  whole_genome_gene_dist <- validateDf(whole_genome_gene_dist, list(  # rename as whole_genome_gene_list #eh it's a df though  # wait gene_list, marker_list etc aren't dfs?? WHAT IS R EVEN
     c("Chromosome", "integer"),
     c("GeneStart", "integer"),  # Def superfluous - never used #yep
     c("GeneEnd", "integer"), # Def superfluous - never used #yep
