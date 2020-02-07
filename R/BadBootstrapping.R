@@ -12,19 +12,19 @@ complex_Fun<-function(x){
     present<-x[i]
     ales<-x[-i]
     alesDot<-sum(ales)/(length(x)-1)
-    
+
     dSubI<-present-alesDot
     ds<-c(ds,dSubI)
-    
+
   }
   return(ds)
 }
 target_gene_list_DUPS<-unique(read.csv("IonomicGeneList.csv",stringsAsFactors = F)[,c(1,3,4)])
 
 
-############ # 1 # ###############
+############ # 1  | rand    | no_bb | RL+cutoff   | no_dup | BB1Ai  # ###############
 #Bad Bootstrapping 1: Random Placement (no markers involved)
-##A. No bounceback, 
+##A. No bounceback,
 ###i. R-> L mapping only,cut off whatever's beyond the end of the chromosome
 ####a. No Dups
 ###(BB1Ai)
@@ -32,7 +32,7 @@ target_gene_list_DUPS<-unique(read.csv("IonomicGeneList.csv",stringsAsFactors = 
 #paperValidator<-toValidate[c(4,5,14),]
 
 
-d=1 
+d=1
 BB1AiBootstrapper<-as.data.frame(matrix(data=0,nrow=length(paperValidator$chromosome),ncol=n_reps))
 for (QTL in 1:length(paperValidator$chromosome)){
   QTLength<-paperValidator[QTL,4]
@@ -62,21 +62,21 @@ for (QTL in 1:length(paperValidator$chromosome)){
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB1AiBootstrapper[QTL,BB1Ai]<-GenesWithin
   }
-  
+
   BS_dist<-unlist(BB1AiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught <-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum <-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -85,17 +85,16 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 
-                              
+
 }
 
 
-#####
-############ # 2 # ###############
+############ # 2  | rand    | no_bb | both+cutoff | no_dup | BB1Aii # ###############
 #Bad Bootstrapping 1: Random Placement (no markers involved)
-##A. No bounceback, 
+##A. No bounceback,
 ###ii. R-> L OR L-> R mapping,cut off whatever's beyond the end of the chromosome
 ####a. No Dups
 ###(BB1Aii)
@@ -105,7 +104,7 @@ BB1AiiBootstrapper<-as.data.frame(matrix(data=0,nrow=length(paperValidator$chrom
 for (QTL in 1:length(paperValidator$chromosome)){
   QTLength<-paperValidator[QTL,4]
   obs_value= paperValidator[QTL,6]
-  
+
   for(BB1Aii in 1:n_reps ){
     ChosenChromosome<-sample(1:9,1)
     endSpot=10000000000000000
@@ -120,7 +119,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
       fakeQTLspot<-sample(lowerLimitChosenChromosome:upperLimitChosenChromosome,1)
       endSpot<-sample(c(fakeQTLspot+QTLength,fakeQTLspot-QTLength),1)
     }
-    
+
     disorderededges<-c(fakeQTLspot,endSpot)
     edges<-disorderededges[order(disorderededges)]
     GenesWithin=0
@@ -129,20 +128,20 @@ for (QTL in 1:length(paperValidator$chromosome)){
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB1AiiBootstrapper[QTL,BB1Aii]<-GenesWithin
   }
   BS_dist<-unlist(BB1AiiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -151,15 +150,14 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
 
-#####
-############ # 3 # ###############
+############ # 3  | rand    | bb    | RL+cutoff   | no_dup | BB1Bi  # ###############
 #Bad Bootstrapping 1: Random Placement (no markers involved)
-##B. Bounceback, 
+##B. Bounceback,
 ###i. R-> L  mapping,cut off whatever's beyond the end of the chromosome
 ####a. No Dups
 ###(BB1Bi)
@@ -179,12 +177,12 @@ for (QTL in 1:length(paperValidator$chromosome)){
     }
     fakeQTLspot<-sample(lowerLimitChosenChromosome:upperLimitChosenChromosome,1)
     endSpot<-fakeQTLspot+QTLength
-    
+
     if(endSpot>upperLimitChosenChromosome){
       endSpot=upperLimitChosenChromosome
       fakeQTLspot=endSpot-QTLength
     }
-    
+
     disorderededges<-c(fakeQTLspot,endSpot)
     edges<-disorderededges[order(disorderededges)]
     GenesWithin=0
@@ -193,20 +191,20 @@ for (QTL in 1:length(paperValidator$chromosome)){
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB1BiBootstrapper[QTL,BB1Bi]<-GenesWithin
   }
   BS_dist<-unlist(BB1BiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -215,15 +213,14 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
-#####
-############ # 4 # ###############
+############ # 4  | rand    | bb    | both        | no_dup | BB1Bii # ###############
 #Bad Bootstrapping 1: Random Placement (no markers involved)
-##B. Bounceback, 
-###ii. R-> L, L->R  
+##B. Bounceback,
+###ii. R-> L, L->R
 ####a. No Dups
 ###(BB1Bii)
 d=d+1
@@ -242,7 +239,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
     }
     fakeQTLspot<-sample(lowerLimitChosenChromosome:upperLimitChosenChromosome,1)
     endSpot<-sample(c(fakeQTLspot+QTLength,fakeQTLspot-QTLength),1)
-    
+
     if(endSpot>upperLimitChosenChromosome){
       endSpot=upperLimitChosenChromosome
       fakeQTLspot=endSpot-QTLength
@@ -251,8 +248,8 @@ for (QTL in 1:length(paperValidator$chromosome)){
       endSpot=lowerLimitChosenChromosome
       fakeQTLspot=endSpot+QTLength
     }
-    
-   
+
+
     disorderededges<-c(fakeQTLspot,endSpot)
     edges<-disorderededges[order(disorderededges)]
     GenesWithin=0
@@ -261,20 +258,20 @@ for (QTL in 1:length(paperValidator$chromosome)){
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB1BiiBootstrapper[QTL,BB1Bii]<-GenesWithin
   }
   BS_dist<-unlist(BB1BiiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -283,14 +280,13 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
-#####
-############ # 5 # ###############
-#Bad Bootstrapping 2: Marker Placement 
-##A. No bounceback, 
+############ # 5  | mrk     | no_bb | RL+cutoff   | no_dup | BB2Ai  # ###############
+#Bad Bootstrapping 2: Marker Placement
+##A. No bounceback,
 ###i. R-> L mapping only , cut off whatever's beyond the end of the chromosome
 ####a. No Dups
 ###(BB2Ai)
@@ -315,7 +311,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
         eval(as.name(paste0(
           'MarkersOnChromosome', ChosenChromosome
         )))
-      
+
       L_MarkerList <-
         MarkersOnChromosome[which(
           MarkersOnChromosome$Base < (upperLimitChosenChromosome - QTLength) &
@@ -324,7 +320,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
     }
 
     EveryOptionalMarker<-L_MarkerList
- 
+
     fakeQTLspot<-sample(EveryOptionalMarker$Base,1)
 
     secondEndpoint<-fakeQTLspot+QTLength
@@ -336,20 +332,20 @@ for (QTL in 1:length(paperValidator$chromosome)){
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB2AiBootstrapper[QTL,BB2Ai]<-GenesWithin
   }
   BS_dist<-unlist(BB2AiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -358,17 +354,16 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
 
 
-#####
-############ # 6 # ###############
-#Bad Bootstrapping 2: Marker Placement 
-##A. No bounceback, 
-###i. R-> L, L->R mapping 
+############ # 6  | mrk     | no_bb | both        | no_dup | BB2Aii # ###############
+#Bad Bootstrapping 2: Marker Placement
+##A. No bounceback,
+###i. R-> L, L->R mapping
 ####a. No Dups
 ###(BB2Aii)
 d=d+1
@@ -379,7 +374,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
   for(BB2Aii in 1:n_reps){
     L_MarkerList$id<-c()
     EveryOptionalMarker<-as.data.frame(matrix(nrow=0,ncol=3))
-    
+
     while(length(EveryOptionalMarker$id)<1){
       ChosenChromosome<-sample(1:9,1)
       MarkersOnChromosome <-
@@ -403,16 +398,16 @@ for (QTL in 1:length(paperValidator$chromosome)){
       EveryOptionalMarker <- unique(rbind(L_MarkerList, R_MarkerList))
     }
     if(length(EveryOptionalMarker$Base)==1){
-      fakeQTLspot=EveryOptionalMarker$Base} 
+      fakeQTLspot=EveryOptionalMarker$Base}
     else{
       fakeQTLspot<-sample(EveryOptionalMarker$Base,1)}
-    
+
     L_List<-as.numeric(length(which(L_MarkerList$Base==fakeQTLspot)))
     R_List<-as.numeric(length(which(R_MarkerList$Base==fakeQTLspot)))
     if (L_List>0 & R_List>0){
       secondEndpoint<-sample(c(fakeQTLspot+QTLength,fakeQTLspot-QTLength),1)}
     if (L_List>0 & R_List==0){
-      secondEndpoint<-fakeQTLspot+QTLength} 
+      secondEndpoint<-fakeQTLspot+QTLength}
     if (L_List==0 & R_List>0){
       secondEndpoint<-fakeQTLspot-QTLength}
     disorderededges<-c(secondEndpoint,fakeQTLspot)
@@ -423,20 +418,20 @@ for (QTL in 1:length(paperValidator$chromosome)){
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB2AiiBootstrapper[QTL,BB2Aii]<-GenesWithin
   }
   BS_dist<-unlist(BB2AiiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -445,17 +440,16 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
 
 
-#####
-############ # 7 # ###############
-#Bad Bootstrapping 2: Marker Placement 
-##B.Bounceback, 
-###i. L->R mapping 
+############ # 7  | mrk     | bb    | LR          | no_dup | BB2Bi  # ###############
+#Bad Bootstrapping 2: Marker Placement
+##B.Bounceback,
+###i. L->R mapping
 ####a. No Dups
 ###(BB2Bi)
 d=d+1
@@ -464,10 +458,10 @@ for (QTL in 1:length(paperValidator$chromosome)){
   QTLength<-paperValidator[QTL,4]
   obs_value= paperValidator[QTL,6]
   for(BB2Bi in 1:n_reps){
-   
+
     EveryOptionalMarker<-as.data.frame(matrix(nrow=0,ncol=3))
-    
-    
+
+
     ChosenChromosome<-sample(1:9,1)
     upperLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 4]
     lowerLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 3]
@@ -476,20 +470,20 @@ for (QTL in 1:length(paperValidator$chromosome)){
         upperLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 4]
         lowerLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 3]
       }
-      
-    
+
+
       MarkersOnChromosome <-
         eval(as.name(paste0(
           'MarkersOnChromosome', ChosenChromosome
         )))
-      
+
       fakeQTLspot<-sample(MarkersOnChromosome$Base,1)
       secondEndpoint<-fakeQTLspot+QTLength
     if(secondEndpoint>upperLimitChosenChromosome){
       fakeQTLspot<-max(MarkersOnChromosome$Base)
       secondEndpoint<-fakeQTLspot-QTLength
     }
-    
+
     disorderededges<-c(secondEndpoint,fakeQTLspot)
     edges<-disorderededges[order(disorderededges)]
     GenesWithin=0
@@ -498,20 +492,20 @@ for (QTL in 1:length(paperValidator$chromosome)){
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB2BiBootstrapper[QTL,BB2Bi]<-GenesWithin
   }
   BS_dist<-unlist(BB2BiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -520,17 +514,16 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
 
 
-#####
-############ # 8 # ###############
-#Bad Bootstrapping 2: Marker Placement 
-##B.Bounceback, 
-###ii. bidirectional mapping 
+############ # 8  | mrk     | bb    | bidi        | no_dup | BB2Bii # ###############
+#Bad Bootstrapping 2: Marker Placement
+##B.Bounceback,
+###ii. bidirectional mapping
 ####a. No Dups
 ###(BB2Bii)
 d=d+1
@@ -539,10 +532,10 @@ for (QTL in 1:length(paperValidator$chromosome)){
   QTLength<-paperValidator[QTL,4]
   obs_value= paperValidator[QTL,6]
   for(BB2Bii in 1:n_reps){
-    
+
     EveryOptionalMarker<-as.data.frame(matrix(nrow=0,ncol=3))
-    
-    
+
+
     ChosenChromosome<-sample(1:9,1)
     upperLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 4]
     lowerLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 3]
@@ -551,13 +544,13 @@ for (QTL in 1:length(paperValidator$chromosome)){
       upperLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 4]
       lowerLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 3]
     }
-    
-    
+
+
     MarkersOnChromosome <-
       eval(as.name(paste0(
         'MarkersOnChromosome', ChosenChromosome
       )))
-    
+
     fakeQTLspot<-sample(MarkersOnChromosome$Base,1)
     secondEndpoint<-sample(c(fakeQTLspot+QTLength,fakeQTLspot-QTLength),1)
     if(secondEndpoint>upperLimitChosenChromosome){
@@ -568,7 +561,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
       fakeQTLspot<-min(MarkersOnChromosome$Base)
       secondEndpoint<-fakeQTLspot+QTLength
     }
-    
+
     disorderededges<-c(secondEndpoint,fakeQTLspot)
     edges<-disorderededges[order(disorderededges)]
     GenesWithin=0
@@ -577,20 +570,20 @@ for (QTL in 1:length(paperValidator$chromosome)){
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB2BiiBootstrapper[QTL,BB2Bii]<-GenesWithin
   }
   BS_dist<-unlist(BB2BiiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -599,18 +592,17 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
 
 
-#####
-############ # 9 # ###############
+############ # 9  | qtl_mrk | no_bb | LR          | no_dup | BB3Ai  # ###############
 
-#Bad Bootstrapping 3: QTL specific Marker Placement 
-##A.No bounceback, 
-###i. L->R mapping 
+#Bad Bootstrapping 3: QTL specific Marker Placement
+##A.No bounceback,
+###i. L->R mapping
 ####a. No Dups
 ###(BB3Ai)
 d=d+1
@@ -635,33 +627,33 @@ for (QTL in 1:length(paperValidator$chromosome)){
 
   EveryOptionalMarker<-L_MarkerList
   for(catastrophe in 1:n_reps){
-    
+
     fakeQTLspot<-sample(EveryOptionalMarker$Base,1)
     secondEndpoint<-fakeQTLspot+QTLength
-    
+
     disorderededges<-c(secondEndpoint,fakeQTLspot)
     edges<-disorderededges[order(disorderededges)]
     GenesWithin=0
     for(poss in 1:length(target_gene_list$GeneID)){
       if(target_gene_list[poss,2]==ChosenChromosome){
-        
+
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB3AiBootstrapper[QTL,catastrophe]<-GenesWithin
   }
   BS_dist<-unlist(BB3AiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -670,17 +662,16 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
-  
+
 }
 
 
-#####
-############ # 10 # ###############
-#Bad Bootstrapping 3: QTL specific Marker Placement 
-##A.No bounceback, 
-###ii. L->R, R->L mapping 
+############ # 10 | qtl_mrk | no_bb | both        | no_dup | BB3Aii # ###############
+#Bad Bootstrapping 3: QTL specific Marker Placement
+##A.No bounceback,
+###ii. L->R, R->L mapping
 ####a. No Dups
 ###(BB3Aii)
 d=d+1
@@ -690,7 +681,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
   obs_value= paperValidator[QTL,6]
   ChosenChromosome<-paperValidator[QTL,1]
   EveryOptionalMarker<-as.data.frame(matrix(nrow=0,ncol=3))
-  
+
   MarkersOnChromosome <-
     eval(as.name(paste0(
       'MarkersOnChromosome', ChosenChromosome
@@ -709,10 +700,10 @@ for (QTL in 1:length(paperValidator$chromosome)){
         MarkersOnChromosome$Base <
         upperLimitChosenChromosome
     ), ]
-  EveryOptionalMarker <- unique(rbind(L_MarkerList, R_MarkerList)) 
-  
+  EveryOptionalMarker <- unique(rbind(L_MarkerList, R_MarkerList))
+
   for(catastrophe in 1:n_reps){
-    
+
     if(length(EveryOptionalMarker$Base)==1){
       fakeQTLspot=EveryOptionalMarker$Base
     } else{
@@ -725,7 +716,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
     }
     if (L_List>0 & R_List==0){
       secondEndpoint<-fakeQTLspot+QTLength
-    } 
+    }
     if (L_List==0 & R_List>0){
       secondEndpoint<-fakeQTLspot-QTLength
     }
@@ -734,24 +725,24 @@ for (QTL in 1:length(paperValidator$chromosome)){
     GenesWithin=0
     for(poss in 1:length(target_gene_list$GeneID)){
       if(target_gene_list[poss,2]==ChosenChromosome){
-        
+
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB3AiiBootstrapper[QTL,catastrophe]<-GenesWithin
   }
   BS_dist<-unlist(BB3AiiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -760,16 +751,15 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
 
-#####
-############ # 11 # ###############
-#Bad Bootstrapping 3: QTL specific Marker Placement 
-##B.Bounceback, 
-###i. L->R mapping 
+############ # 11 | qtl_mrk | bb    | LR          | no_dup | BB3Bi  # ###############
+#Bad Bootstrapping 3: QTL specific Marker Placement
+##B.Bounceback,
+###i. L->R mapping
 ####a. No Dups
 ###(BB3Bi)
 d=d+1
@@ -778,15 +768,15 @@ for (QTL in 1:length(paperValidator$chromosome)){
   QTLength<-paperValidator[QTL,4]
   ChosenChromosome<-as.numeric(paperValidator[QTL,1])
   obs_value= paperValidator[QTL,6]
-  
+
   MarkersOnChromosome <-
     eval(as.name(paste0(
       'MarkersOnChromosome', ChosenChromosome
     )))
   upperLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 4]
   lowerLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 3]
-  
-  
+
+
   for(catastrophe in 1:n_reps){
     fakeQTLspot<-sample(MarkersOnChromosome$Base,1)
     secondEndpoint<-fakeQTLspot+QTLength
@@ -799,24 +789,24 @@ for (QTL in 1:length(paperValidator$chromosome)){
     GenesWithin=0
     for(poss in 1:length(target_gene_list$GeneID)){
       if(target_gene_list[poss,2]==ChosenChromosome){
-        
+
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB3BiBootstrapper[QTL,catastrophe]<-GenesWithin
   }
   BS_dist<-unlist(BB3BiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -825,16 +815,15 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
 
-#####
-############ # 12 # ###############
-#Bad Bootstrapping 3: QTL specific Marker Placement 
+############ # 12 | qtl_mrk | bb    | both        | no_dup | BB3Bii # ###############
+#Bad Bootstrapping 3: QTL specific Marker Placement
 ##B.Bounceback
-###ii. L->R, R->L mapping 
+###ii. L->R, R->L mapping
 ####a. No Dups
 ###(BB3Bii)
 d=d+1
@@ -843,16 +832,16 @@ for (QTL in 1:length(paperValidator$chromosome)){
   QTLength<-paperValidator[QTL,4]
   obs_value= paperValidator[QTL,6]
   ChosenChromosome<-paperValidator[QTL,1]
-  
-  
+
+
   MarkersOnChromosome <-
     eval(as.name(paste0(
       'MarkersOnChromosome', ChosenChromosome
     )))
   upperLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 4]
   lowerLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 3]
-  
-  
+
+
   for(catastrophe in 1:n_reps){
     fakeQTLspot<-sample(MarkersOnChromosome$Base,1)
     secondEndpoint<-sample(c(fakeQTLspot+QTLength,fakeQTLspot-QTLength),1)
@@ -869,24 +858,24 @@ for (QTL in 1:length(paperValidator$chromosome)){
     GenesWithin=0
     for(poss in 1:length(target_gene_list$GeneID)){
       if(target_gene_list[poss,2]==ChosenChromosome){
-        
+
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB3BiiBootstrapper[QTL,catastrophe]<-GenesWithin
   }
   BS_dist<-unlist(BB3BiiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -895,7 +884,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
@@ -906,17 +895,15 @@ for (QTL in 1:length(paperValidator$chromosome)){
 
 
 #########
-
 target_gene_list<-target_gene_list_DUPS
-#####
-############ # 13 # ###############
+############ # 13 | rand    | no_bb | RL+cutoff   | no_dup | BB1Ai  (assumed bc identical to #1) # ###############
 
 d=13
 BB1AiBootstrapper<-as.data.frame(matrix(data=0,nrow=length(paperValidator$chromosome),ncol=n_reps))
 for (QTL in 1:length(paperValidator$chromosome)){
   QTLength<-paperValidator[QTL,4]
   obs_value= paperValidator[QTL,6]
-  
+
   for(BB1Ai in 1:n_reps ){
     ChosenChromosome<-sample(1:9,1)
     endSpot=10000000000000000
@@ -928,11 +915,11 @@ for (QTL in 1:length(paperValidator$chromosome)){
       lowerLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 3]
     }
     while(endSpot>upperLimitChosenChromosome){
-      
+
       fakeQTLspot<-sample(lowerLimitChosenChromosome:upperLimitChosenChromosome,1)
       endSpot<-fakeQTLspot+QTLength
     }
-    
+
     edges<-c(fakeQTLspot,endSpot)
     GenesWithin=0
     #for(poss in 1:length(known_gene_list$GeneID)){
@@ -942,20 +929,20 @@ for (QTL in 1:length(paperValidator$chromosome)){
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB1AiBootstrapper[QTL,BB1Ai]<-GenesWithin
   }
   BS_dist<-unlist(BB1AiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -964,16 +951,15 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
 
-#####
-############ # 14 # ###############
+############ # 14 | rand    | no_bb | both+cutoff | no_dup | BB1Aii # ###############
 
 #Bad Bootstrapping 1: Random Placement (no markers involved)
-##A. No bounceback, 
+##A. No bounceback,
 ###ii. R-> L OR L-> R mapping,cut off whatever's beyond the end of the chromosome
 ####a. No Dups
 ###(BB1Aii)
@@ -983,7 +969,7 @@ BB1AiiBootstrapper<-as.data.frame(matrix(data=0,nrow=length(paperValidator$chrom
 for (QTL in 1:length(paperValidator$chromosome)){
   QTLength<-paperValidator[QTL,4]
   obs_value= paperValidator[QTL,6]
-  
+
   for(BB1Aii in 1:n_reps ){
     ChosenChromosome<-sample(1:9,1)
     endSpot=10000000000000000
@@ -998,7 +984,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
       fakeQTLspot<-sample(lowerLimitChosenChromosome:upperLimitChosenChromosome,1)
       endSpot<-sample(c(fakeQTLspot+QTLength,fakeQTLspot-QTLength),1)
     }
-    
+
     disorderededges<-c(fakeQTLspot,endSpot)
     edges<-disorderededges[order(disorderededges)]
     GenesWithin=0
@@ -1007,20 +993,20 @@ for (QTL in 1:length(paperValidator$chromosome)){
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB1AiiBootstrapper[QTL,BB1Aii]<-GenesWithin
   }
   BS_dist<-unlist(BB1AiiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -1029,15 +1015,14 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
 
-#####
-############ # 15 # ###############
+############ # 15 | rand    | bb    | RL+cutoff   | no_dup | BB1Bi  # ###############
 #Bad Bootstrapping 1: Random Placement (no markers involved)
-##B. Bounceback, 
+##B. Bounceback,
 ###i. R-> L  mapping,cut off whatever's beyond the end of the chromosome
 ####a. No Dups
 ###(BB1Bi)
@@ -1057,12 +1042,12 @@ for (QTL in 1:length(paperValidator$chromosome)){
     }
     fakeQTLspot<-sample(lowerLimitChosenChromosome:upperLimitChosenChromosome,1)
     endSpot<-fakeQTLspot+QTLength
-    
+
     if(endSpot>upperLimitChosenChromosome){
       endSpot=upperLimitChosenChromosome
       fakeQTLspot=endSpot-QTLength
     }
-    
+
     disorderededges<-c(fakeQTLspot,endSpot)
     edges<-disorderededges[order(disorderededges)]
     GenesWithin=0
@@ -1071,20 +1056,20 @@ for (QTL in 1:length(paperValidator$chromosome)){
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB1BiBootstrapper[QTL,BB1Bi]<-GenesWithin
   }
   BS_dist<-unlist(BB1BiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -1093,16 +1078,15 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
 
-#####
-############ # 16 # ###############
+############ # 16 | rand    | bb    | both        | no_dup | BB1Bii # ###############
 #Bad Bootstrapping 1: Random Placement (no markers involved)
-##B. Bounceback, 
-###ii. R-> L, L->R  
+##B. Bounceback,
+###ii. R-> L, L->R
 ####a. No Dups
 ###(BB1Bii)
 d=d+1
@@ -1121,7 +1105,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
     }
     fakeQTLspot<-sample(lowerLimitChosenChromosome:upperLimitChosenChromosome,1)
     endSpot<-sample(c(fakeQTLspot+QTLength,fakeQTLspot-QTLength),1)
-    
+
     if(endSpot>upperLimitChosenChromosome){
       endSpot=upperLimitChosenChromosome
       fakeQTLspot=endSpot-QTLength
@@ -1130,8 +1114,8 @@ for (QTL in 1:length(paperValidator$chromosome)){
       endSpot=lowerLimitChosenChromosome
       fakeQTLspot=endSpot+QTLength
     }
-    
-    
+
+
     disorderededges<-c(fakeQTLspot,endSpot)
     edges<-disorderededges[order(disorderededges)]
     GenesWithin=0
@@ -1140,20 +1124,20 @@ for (QTL in 1:length(paperValidator$chromosome)){
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB1BiiBootstrapper[QTL,BB1Bii]<-GenesWithin
   }
   BS_dist<-unlist(BB1BiiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -1162,16 +1146,15 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
 
 
-#####
-############ # 17 # ###############
-#Bad Bootstrapping 2: Marker Placement 
-##A. No bounceback, 
+############ # 17 | mrk     | no_bb | RL+cutoff   | no_dup | BB2Ai  # ###############
+#Bad Bootstrapping 2: Marker Placement
+##A. No bounceback,
 ###i. R-> L mapping only , cut off whatever's beyond the end of the chromosome
 ####a. No Dups
 ###(BB2Ai)
@@ -1196,7 +1179,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
         eval(as.name(paste0(
           'MarkersOnChromosome', ChosenChromosome
         )))
-      
+
       L_MarkerList <-
         MarkersOnChromosome[which(
           MarkersOnChromosome$Base < (upperLimitChosenChromosome - QTLength) &
@@ -1204,11 +1187,11 @@ for (QTL in 1:length(paperValidator$chromosome)){
             lowerLimitChosenChromosome
         ), ]
     }
-    
+
     EveryOptionalMarker<-L_MarkerList
-    
+
     fakeQTLspot<-sample(EveryOptionalMarker$Base,1)
-    
+
     secondEndpoint<-fakeQTLspot+QTLength
     disorderededges<-c(secondEndpoint,fakeQTLspot)
     edges<-disorderededges[order(disorderededges)]
@@ -1218,20 +1201,20 @@ for (QTL in 1:length(paperValidator$chromosome)){
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB2AiBootstrapper[QTL,BB2Ai]<-GenesWithin
   }
   BS_dist<-unlist(BB2AiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -1240,17 +1223,16 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
 
 
-#####
-############ # 18 # ###############
-#Bad Bootstrapping 2: Marker Placement 
-##A. No bounceback, 
-###i. R-> L, L->R mapping 
+############ # 18 | mrk     | no_bb | both+cutoff | no_dup | BB2Aii # ###############
+#Bad Bootstrapping 2: Marker Placement
+##A. No bounceback,
+###i. R-> L, L->R mapping
 ####a. No Dups
 ###(BB2Aii)
 d=d+1
@@ -1261,7 +1243,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
   for(BB2Aii in 1:n_reps){
     L_MarkerList$id<-c()
     EveryOptionalMarker<-as.data.frame(matrix(nrow=0,ncol=3))
-    
+
     while(length(EveryOptionalMarker$id)<1){
       ChosenChromosome<-sample(1:9,1)
       MarkersOnChromosome <-
@@ -1285,16 +1267,16 @@ for (QTL in 1:length(paperValidator$chromosome)){
       EveryOptionalMarker <- unique(rbind(L_MarkerList, R_MarkerList))
     }
     if(length(EveryOptionalMarker$Base)==1){
-      fakeQTLspot=EveryOptionalMarker$Base} 
+      fakeQTLspot=EveryOptionalMarker$Base}
     else{
       fakeQTLspot<-sample(EveryOptionalMarker$Base,1)}
-    
+
     L_List<-as.numeric(length(which(L_MarkerList$Base==fakeQTLspot)))
     R_List<-as.numeric(length(which(R_MarkerList$Base==fakeQTLspot)))
     if (L_List>0 & R_List>0){
       secondEndpoint<-sample(c(fakeQTLspot+QTLength,fakeQTLspot-QTLength),1)}
     if (L_List>0 & R_List==0){
-      secondEndpoint<-fakeQTLspot+QTLength} 
+      secondEndpoint<-fakeQTLspot+QTLength}
     if (L_List==0 & R_List>0){
       secondEndpoint<-fakeQTLspot-QTLength}
     disorderededges<-c(secondEndpoint,fakeQTLspot)
@@ -1305,20 +1287,20 @@ for (QTL in 1:length(paperValidator$chromosome)){
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB2AiiBootstrapper[QTL,BB2Aii]<-GenesWithin
   }
   BS_dist<-unlist(BB2AiiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -1327,17 +1309,16 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
 
-#####
-############ # 19 # ###############
+############ # 19 | mrk     | bb    | LR          | no_dup | BB2Bi  # ###############
 
-#Bad Bootstrapping 2: Marker Placement 
-##B.Bounceback, 
-###i. L->R mapping 
+#Bad Bootstrapping 2: Marker Placement
+##B.Bounceback,
+###i. L->R mapping
 ####a. No Dups
 ###(BB2Bi)
 d=d+1
@@ -1346,10 +1327,10 @@ for (QTL in 1:length(paperValidator$chromosome)){
   QTLength<-paperValidator[QTL,4]
   obs_value= paperValidator[QTL,6]
   for(BB2Bi in 1:n_reps){
-    
+
     EveryOptionalMarker<-as.data.frame(matrix(nrow=0,ncol=3))
-    
-    
+
+
     ChosenChromosome<-sample(1:9,1)
     upperLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 4]
     lowerLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 3]
@@ -1358,20 +1339,20 @@ for (QTL in 1:length(paperValidator$chromosome)){
       upperLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 4]
       lowerLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 3]
     }
-    
-    
+
+
     MarkersOnChromosome <-
       eval(as.name(paste0(
         'MarkersOnChromosome', ChosenChromosome
       )))
-    
+
     fakeQTLspot<-sample(MarkersOnChromosome$Base,1)
     secondEndpoint<-fakeQTLspot+QTLength
     if(secondEndpoint>upperLimitChosenChromosome){
       fakeQTLspot<-max(MarkersOnChromosome$Base)
       secondEndpoint<-fakeQTLspot-QTLength
     }
-    
+
     disorderededges<-c(secondEndpoint,fakeQTLspot)
     edges<-disorderededges[order(disorderededges)]
     GenesWithin=0
@@ -1380,20 +1361,20 @@ for (QTL in 1:length(paperValidator$chromosome)){
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB2BiBootstrapper[QTL,BB2Bi]<-GenesWithin
   }
   BS_dist<-unlist(BB2BiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -1402,16 +1383,15 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
 
-#####
-############ # 20 # ###############
-#Bad Bootstrapping 2: Marker Placement 
-##B.Bounceback, 
-###ii. bidirectional mapping 
+############ # 20 | mrk     | bb    | bidi        | no_dup | BB2Bii # ###############
+#Bad Bootstrapping 2: Marker Placement
+##B.Bounceback,
+###ii. bidirectional mapping
 ####a. No Dups
 ###(BB2Bii)
 d=d+1
@@ -1420,10 +1400,10 @@ for (QTL in 1:length(paperValidator$chromosome)){
   QTLength<-paperValidator[QTL,4]
   obs_value= paperValidator[QTL,6]
   for(BB2Bii in 1:n_reps){
-    
+
     EveryOptionalMarker<-as.data.frame(matrix(nrow=0,ncol=3))
-    
-    
+
+
     ChosenChromosome<-sample(1:9,1)
     upperLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 4]
     lowerLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 3]
@@ -1432,13 +1412,13 @@ for (QTL in 1:length(paperValidator$chromosome)){
       upperLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 4]
       lowerLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 3]
     }
-    
-    
+
+
     MarkersOnChromosome <-
       eval(as.name(paste0(
         'MarkersOnChromosome', ChosenChromosome
       )))
-    
+
     fakeQTLspot<-sample(MarkersOnChromosome$Base,1)
     secondEndpoint<-sample(c(fakeQTLspot+QTLength,fakeQTLspot-QTLength),1)
     if(secondEndpoint>upperLimitChosenChromosome){
@@ -1449,7 +1429,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
       fakeQTLspot<-min(MarkersOnChromosome$Base)
       secondEndpoint<-fakeQTLspot+QTLength
     }
-    
+
     disorderededges<-c(secondEndpoint,fakeQTLspot)
     edges<-disorderededges[order(disorderededges)]
     GenesWithin=0
@@ -1458,21 +1438,21 @@ for (QTL in 1:length(paperValidator$chromosome)){
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB2BiiBootstrapper[QTL,BB2Bii]<-GenesWithin
   }
-  
+
   BS_dist<-unlist(BB2BiiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -1481,19 +1461,18 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
   }
 
 
 
 ####
-#####
-############ # 21 # ###############
+############ # 21 | qtl_mrk | no_bb | LR          | no_dup | BB3Ai  # ###############
 
-#Bad Bootstrapping 3: QTL specific Marker Placement 
-##A.No bounceback, 
-###i. L->R mapping 
+#Bad Bootstrapping 3: QTL specific Marker Placement
+##A.No bounceback,
+###i. L->R mapping
 ####a. No Dups
 ###(BB3Ai)
 d=d+1
@@ -1515,36 +1494,36 @@ for (QTL in 1:length(paperValidator$chromosome)){
         MarkersOnChromosome$Base >
         lowerLimitChosenChromosome
     ), ]
-  
+
   EveryOptionalMarker<-L_MarkerList
   for(catastrophe in 1:n_reps){
-    
+
     fakeQTLspot<-sample(EveryOptionalMarker$Base,1)
     secondEndpoint<-fakeQTLspot+QTLength
-    
+
     disorderededges<-c(secondEndpoint,fakeQTLspot)
     edges<-disorderededges[order(disorderededges)]
     GenesWithin=0
     for(poss in 1:length(target_gene_list$GeneID)){
       if(target_gene_list[poss,2]==ChosenChromosome){
-        
+
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB3AiBootstrapper[QTL,catastrophe]<-GenesWithin
   }
   BS_dist<-unlist(BB3AiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -1553,16 +1532,15 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
-#####
-############ # 22 # ###############
+############ # 22 | qtl_mrk | no_bb | both        | no_dup | BB3Aii # ###############
 
-#Bad Bootstrapping 3: QTL specific Marker Placement 
-##A.No bounceback, 
-###ii. L->R, R->L mapping 
+#Bad Bootstrapping 3: QTL specific Marker Placement
+##A.No bounceback,
+###ii. L->R, R->L mapping
 ####a. No Dups
 ###(BB3Aii)
 d=d+1
@@ -1572,7 +1550,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
   obs_value= paperValidator[QTL,6]
   ChosenChromosome<-paperValidator[QTL,1]
   EveryOptionalMarker<-as.data.frame(matrix(nrow=0,ncol=3))
-  
+
   MarkersOnChromosome <-
     eval(as.name(paste0(
       'MarkersOnChromosome', ChosenChromosome
@@ -1591,10 +1569,10 @@ for (QTL in 1:length(paperValidator$chromosome)){
         MarkersOnChromosome$Base <
         upperLimitChosenChromosome
     ), ]
-  EveryOptionalMarker <- unique(rbind(L_MarkerList, R_MarkerList)) 
-  
+  EveryOptionalMarker <- unique(rbind(L_MarkerList, R_MarkerList))
+
   for(catastrophe in 1:n_reps){
-    
+
     if(length(EveryOptionalMarker$Base)==1){
       fakeQTLspot=EveryOptionalMarker$Base
     } else{
@@ -1607,7 +1585,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
     }
     if (L_List>0 & R_List==0){
       secondEndpoint<-fakeQTLspot+QTLength
-    } 
+    }
     if (L_List==0 & R_List>0){
       secondEndpoint<-fakeQTLspot-QTLength
     }
@@ -1616,24 +1594,24 @@ for (QTL in 1:length(paperValidator$chromosome)){
     GenesWithin=0
     for(poss in 1:length(target_gene_list$GeneID)){
       if(target_gene_list[poss,2]==ChosenChromosome){
-        
+
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB3AiiBootstrapper[QTL,catastrophe]<-GenesWithin
   }
   BS_dist<-unlist(BB3AiiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -1642,17 +1620,16 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
 
 
-#####
-############ # 23 # ###############
-#Bad Bootstrapping 3: QTL specific Marker Placement 
-##B.Bounceback, 
-###i. L->R mapping 
+############ # 23 | qtl_mrk | bb    | LR          | no_dup | BB3bi  # ###############
+#Bad Bootstrapping 3: QTL specific Marker Placement
+##B.Bounceback,
+###i. L->R mapping
 ####a. No Dups
 ###(BB3Bi)
 d=d+1
@@ -1661,15 +1638,15 @@ for (QTL in 1:length(paperValidator$chromosome)){
   QTLength<-paperValidator[QTL,4]
   ChosenChromosome<-paperValidator[QTL,1]
   obs_value= paperValidator[QTL,6]
-  
+
   MarkersOnChromosome <-
     eval(as.name(paste0(
       'MarkersOnChromosome', ChosenChromosome
     )))
   upperLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 4]
   lowerLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 3]
-  
-  
+
+
   for(catastrophe in 1:n_reps){
     fakeQTLspot<-sample(MarkersOnChromosome$Base,1)
     secondEndpoint<-fakeQTLspot+QTLength
@@ -1682,24 +1659,24 @@ for (QTL in 1:length(paperValidator$chromosome)){
     GenesWithin=0
     for(poss in 1:length(target_gene_list$GeneID)){
       if(target_gene_list[poss,2]==ChosenChromosome){
-        
+
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB3BiBootstrapper[QTL,catastrophe]<-GenesWithin
   }
   BS_dist<-unlist(BB3BiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -1708,17 +1685,16 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
-   
+
 }
 
 
-#####
-############ # 24 # ###############
-#Bad Bootstrapping 3: QTL specific Marker Placement 
+############ # 24 | qtl_mrk | bb    | both        | no_dup | BB3Bii # ###############
+#Bad Bootstrapping 3: QTL specific Marker Placement
 ##B.Bounceback
-###ii. L->R, R->L mapping 
+###ii. L->R, R->L mapping
 ####a. No Dups
 ###(BB3Bii)
 d=d+1
@@ -1727,15 +1703,15 @@ for (QTL in 1:length(paperValidator$chromosome)){
   QTLength<-paperValidator[QTL,4]
   ChosenChromosome<-paperValidator[QTL,1]
   obs_value= paperValidator[QTL,6]
-  
+
   MarkersOnChromosome <-
     eval(as.name(paste0(
       'MarkersOnChromosome', ChosenChromosome
     )))
   upperLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 4]
   lowerLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 3]
-  
-  
+
+
   for(catastrophe in 1:n_reps){
     fakeQTLspot<-sample(MarkersOnChromosome$Base,1)
     secondEndpoint<-sample(c(fakeQTLspot+QTLength,fakeQTLspot-QTLength),1)
@@ -1752,24 +1728,24 @@ for (QTL in 1:length(paperValidator$chromosome)){
     GenesWithin=0
     for(poss in 1:length(target_gene_list$GeneID)){
       if(target_gene_list[poss,2]==ChosenChromosome){
-        
+
         locus<-target_gene_list[poss,3]
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
-          
+
         }
       }
-      
+
     }
     BB3BiiBootstrapper[QTL,catastrophe]<-GenesWithin
   }
   BS_dist<-unlist(BB3BiiBootstrapper[QTL,])
   GHat<-ecdf(BS_dist)
   zNaught<-qnorm(GHat(obs_value))
-  
+
   dSubI<-bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
   accelConstant<-(1/6)*sum(dSubI$jack.values^3)/((sum(dSubI$jack.values^2))^(2/3))
-  
+
   bcaNum<-zNaught+1.96
   bcaDen<-1- accelConstant*(zNaught+1.96)
   if (zNaught==Inf){
@@ -1778,13 +1754,23 @@ for (QTL in 1:length(paperValidator$chromosome)){
     allIn<-zNaught+bcaNum/bcaDen
     toQuantile<-pnorm(allIn)
   }
-  
+
   BootStrapConfidenceIntervals[d,QTL]<-quantile(BS_dist,toQuantile)
 }
 
-#####
+# ?? #####
 ceiling(BootStrapConfidenceIntervals)
 colnames(BootStrapConfidenceIntervals)<-Relevant_QTL$Length
+
+RWR <- function(
+  markers_only, # bool (vs. random placement)
+  no_bounceback, # bool
+  cutoff_beyond_end, # bool (was this a paste error - isnt it bounceback OR cutoff OR skip?)
+  bidirectional, # bool
+  drop_duplicates # bool
+) {
+  temp -> "TEMP"
+}
 
 #Singles Heat Map
 
@@ -1885,14 +1871,14 @@ for(r in 1:8){
   CurrentRow<-SinglesAbsDiffMatrix[r,14:17]
   CR<-CurrentRow[!is.na(CurrentRow)]
   most<-c(most,(mean(CR)))
-}  
+}
 
 mostD<-c()
 for(r in 1:8){
   CurrentRow<-DupsAbsDiffMatrix[r,14:17]
   CR<-CurrentRow[!is.na(CurrentRow)]
   mostD<-c(mostD,(mean(CR)))
-}  
+}
 
 Bucketed_SinglesAbsDiffMatrix<-cbind(Tento100,MilliontoTenmil,most)
 heatmap.2(Bucketed_SinglesAbsDiffMatrix,dendrogram='none',trace="none",Colv=F,Rowv=F,col=coul,main='with dups',na.color='lightblue')
@@ -2014,7 +2000,7 @@ for (mark in 1:length(MarkersOnChromosome1$Base)){
 }
 CBM<-count(BinnedMaerker)
 ###1. bounceback
-#####
+# ?? #####
 startpoints<-sample(1:numlast,1000,replace=T)
 for (p in 1:length(startpoints)){
   if (startpoints[p] >(chromosomeSize[1,2]-avgqtl)){
@@ -2038,7 +2024,7 @@ for (i in 1:length(endIT[,1])){
   yeses<-which(forCounting[,1]==stpt)
   endes<-which(forCounting[,1]==endpt)
   forCounting[c(yeses:endes),2]<-forCounting[c(yeses:endes),2]+1
-  
+
 }
 head(forCounting)
 playingGames<-forCounting[,2]/30
@@ -2052,9 +2038,7 @@ ggplot()+geom_line(aes(x=forCounting[,1],forCounting[,2]))+
 
 
 
-#####
-###2. skip the end
-#####
+#2. skip the end #####
 skipstarts<-sample(1:(chromosomeSize[1,2]-avgqtl),1000,replace=T)
 skipends<-skipstarts+avgqtl
 skipendIT<-cbind(skipstarts,skipends)
@@ -2073,7 +2057,7 @@ for (i in 1:length(skipendIT[,1])){
   yeses<-which(skipforCounting[,1]==stpt)
   endes<-which(skipforCounting[,1]==endpt)
   skipforCounting[c(yeses:endes),2]<-skipforCounting[c(yeses:endes),2]+1
-  
+
 }
 
 ggplot()+geom_line(aes(x=skipforCounting[,1],skipforCounting[,2]))+
@@ -2084,9 +2068,8 @@ ggplot()+geom_line(aes(x=skipforCounting[,1],skipforCounting[,2]))+
 
 
 
-######
-#3. unidir.markers
-######
+
+#3. unidir.markers ######
 
 wellp<-MarkersOnChromosome1[which(MarkersOnChromosome1[,3]<=(chromosomeSize[1,3]-avgqtl)),3]
 unimarkers<-sample(wellp, 1000,replace=T)
@@ -2106,7 +2089,7 @@ for (i in 1:length(uni[,1])){
   yeses<-which(uniforCounting$V1==stpt)
   endes<-which(uniforCounting$V1==endpt)
   uniforCounting[c(yeses:endes),2]<-uniforCounting[c(yeses:endes),2]+1
-  
+
 }
 
 ggplot()+geom_line(aes(x=uniforCounting$V1,uniforCounting$V2))+
@@ -2114,10 +2097,8 @@ ggplot()+geom_line(aes(x=uniforCounting$V1,uniforCounting$V2))+
   geom_histogram(aes(x=Base, y=(..count..)*25),color="cornflowerblue",fill="cornflowerblue",alpha=.5, data=MarkersOnChromosome1,bins=100)+
   theme_classic()+xlab("Position")+
   ylab("Coverage")
-######
 
-#4. bidir markers
-######
+#4. bidir markers ######
 
 bimarkers<-sample(MarkersOnChromosome1[,3], 1000,replace=T)
 
@@ -2127,12 +2108,12 @@ avgqtl<-as.integer(avgqtl)
 for(f in 1:length(bimarkers)){
   if(avgqtl<=bimarkers[f] & bimarkers[f] <=(chromosomeSize[1,3]-avgqtl)){
     direc<-sample(c((bimarkers[f] +avgqtl),(bimarkers[f] -avgqtl)),1)
-    
-    
+
+
   }
   if(avgqtl>bimarkers[f] ){
     direc<-(bimarkers[f] +avgqtl)
-   
+
   }
   if((chromosomeSize[1,3]-avgqtl)<bimarkers[f] ){
     direc<-(bimarkers[f]-avgqtl)
@@ -2157,10 +2138,10 @@ for (i in 1:length(biBoys[,1])){
   }else{ endpt<-min(biforCounting[which(biforCounting[,1]>ending),1])}
 
   yeses<-which(biforCounting[,1]==stpt)
-  
+
   endes<-which(biforCounting[,1]==endpt)
   biforCounting[c(yeses:endes),2]<-biforCounting[c(yeses:endes),2]+1
-  
+
 }
 
 ggplot()+geom_line(aes(x=biforCounting$V1,biforCounting$V2))+
@@ -2170,11 +2151,7 @@ ggplot()+geom_line(aes(x=biforCounting$V1,biforCounting$V2))+
   ylab("Coverage")
 
 
-#plot the markers
-#####
-
-#5. wraparound
-#####
+#5. wraparound #####
 #:(
 toWrapM<-sample(MarkersOnChromosome1[,3], 1000,replace=T)
 extras<-as.data.frame(matrix(ncol=2))
@@ -2218,15 +2195,14 @@ for (i in 1:length(Wrap[,1])){
   if(ending>41160001){
     endpt=max(wrapforCounting[,1])
   }else{ endpt<-min(wrapforCounting[which(wrapforCounting[,1]>ending),1])}
-  
+
   yeses<-which(wrapforCounting[,1]==stpt)
-  
+
   endes<-which(wrapforCounting[,1]==endpt)
   wrapforCounting[c(yeses:endes),2]<-wrapforCounting[c(yeses:endes),2]+1
-  
+
 }
-
-
+# plot ####
 ggplot()+geom_line(aes(x=wrapforCounting$V1,wrapforCounting$V2))+
   geom_histogram(aes(x=Base, y=(..count..)*25),color="cornflowerblue",fill="cornflowerblue",alpha=.5, data=MarkersOnChromosome1,bins=100)+
   theme_classic()+
@@ -2241,7 +2217,7 @@ ggplot()+geom_line(aes(x=wrapforCounting$V1,wrapforCounting$V2))+
 
 to_string <- as_labeller(c(`1` = "Chromosome 1", `2` = "Chromosome 2",`3` = "Chromosome 3", `4` = "Chromosome 4",`5` = "Chromosome 5", `6` = "Chromosome 6",`7` = "Chromosome 7", `8` = "Chromosome 8",`9` = "Chromosome 9"))
 
-ggplot(data=MarkerList)+  
+ggplot(data=MarkerList)+
   facet_wrap(~Chromosome,ncol=3,scales = 'free_x',labeller=to_string)+
   geom_histogram(aes(x=Base, y=(..count..)),color="#00ae5f",fill="#00ae5f",stat='bin',alpha=.5,bins=100)+
   theme_minimal()+
@@ -2250,4 +2226,3 @@ ggplot(data=MarkerList)+
   ylab("Number of Markers")+
   annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf)+
   annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf)
-#####
