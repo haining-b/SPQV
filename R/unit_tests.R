@@ -30,7 +30,7 @@ GENE_LIST[which(GENE_LIST$ID == "1.E"), "Trait"] = "other_trait"
 CHROMOSOME_SIZE <- data.frame(
   Chromosome =      c( 1,     2),
   LeftmostMarker =  c( 20,    10),
-  RightmostMarker = c( 100,   70),
+  RightmostMarker = c( 120,   70),
   Length =          c( 110,   80)
 )
 
@@ -38,7 +38,7 @@ QTL_LIST <- data.frame(
   Length =          c( 5,    10,    30,    80), # don't actually care if on markers or if overlap
   Chromosome =      c( 1,     1,     1,     1),
   LeftmostMarker =  c( 20,    60,    20,    10),
-  RightmostMarker = c( 25,    70,    50,    110)
+  RightmostMarker = c( 25,    70,    50,    90)
 )
 QTL_LIST$Trait <- TRAIT
 QTL_LIST$Treatment <- "UNUSED_FOR_NOW"
@@ -96,7 +96,7 @@ test_that("QTLPlacementProbabilities gets correct probabilites for 'extension'",
     SectionMarkers(MARKER_LIST, nrow(CHROMOSOME_SIZE)), CHROMOSOME_SIZE)
   expect_equal(
     output,
-    c(1/14, 1/14, 1/10, 1/2)
+    c(1/14, 1/14, 1/11, 1/3)
   )
 })
 
@@ -107,7 +107,7 @@ test_that("QTLPlacementProbabilities gets correct probabilites for 'centered', a
   expect_equal(
     output,
     # 5,   10,  30,  80
-    c(1/5, 1/5, 1/4, 1/1)
+    c(1/5, 1/5, 1/4, 1/2)
   )
 })
 
@@ -133,7 +133,98 @@ test_that("CountGenesFound finds correct genes", {
 })
 
 
+# GeneFoundLikelihood ####
+test_that("GeneFoundLikelihood gets correct likelihood for 'extension'", {
+  output <- GeneFoundLikelihood(
+    gene_chr = 1, 
+    gene_locus = 40, 
+    qtl_ext_length = 30, 
+    placement_type = "extension",
+    per_marker_likelihood = 0.1, 
+    sectioned_marker_list = SectionMarkers(MARKER_LIST, nrow(CHROMOSOME_SIZE)),
+    chromosome_size = CHROMOSOME_SIZE
+  )
+  expect_equal(
+    output, 0.1 * 3
+  )
+})
+
+test_that("GeneFoundLikelihood gets correct likelihood for 'centered'", {
+  output <- GeneFoundLikelihood(
+    gene_chr = 1, 
+    gene_locus = 70, 
+    qtl_ext_length = 30, 
+    placement_type = "centered",
+    per_marker_likelihood = 0.1, 
+    sectioned_marker_list = SectionMarkers(MARKER_LIST, nrow(CHROMOSOME_SIZE)),
+    chromosome_size = CHROMOSOME_SIZE
+  )
+  expect_equal(
+    output, 0.1 * 2
+  )
+})
+
+test_that("GeneFoundLikelihood allows overhang in other direction for 'extension'", {
+  output <- GeneFoundLikelihood(
+    gene_chr = 1, 
+    gene_locus = 20, 
+    qtl_ext_length = 30, 
+    placement_type = "extension",
+    per_marker_likelihood = 0.1, 
+    sectioned_marker_list = SectionMarkers(MARKER_LIST, nrow(CHROMOSOME_SIZE)),
+    chromosome_size = CHROMOSOME_SIZE
+  )
+  expect_equal(
+    output, 0.1 * 1
+  )
+})
+
+test_that("GeneFoundLikelihood doesn't allow overhang in other direction for 'centered'", {
+  output <- GeneFoundLikelihood(
+    gene_chr = 1, 
+    gene_locus = 20, 
+    qtl_ext_length = 30, 
+    placement_type = "centered",
+    per_marker_likelihood = 0.1, 
+    sectioned_marker_list = SectionMarkers(MARKER_LIST, nrow(CHROMOSOME_SIZE)),
+    chromosome_size = CHROMOSOME_SIZE
+  )
+  expect_equal(
+    output, 0.1 * 0
+  )
+})
+
+test_that("GeneFoundLikelihood returns 0 when gene not reachable", {
+  output <- GeneFoundLikelihood(
+    gene_chr = 1, 
+    gene_locus = 50, 
+    qtl_ext_length = 2, 
+    placement_type = "centered",
+    per_marker_likelihood = 0.1, 
+    sectioned_marker_list = SectionMarkers(MARKER_LIST, nrow(CHROMOSOME_SIZE)),
+    chromosome_size = CHROMOSOME_SIZE
+  )
+  expect_equal(
+    output, 0
+  )
+})
+
+test_that("GeneFoundLikelihood returns 0 when QTL can't be placed", {
+  output <- GeneFoundLikelihood(
+    gene_chr = 2, 
+    gene_locus = 30, 
+    qtl_ext_length = 100, 
+    placement_type = "centered",
+    per_marker_likelihood = 0.1, 
+    sectioned_marker_list = SectionMarkers(MARKER_LIST, nrow(CHROMOSOME_SIZE)),
+    chromosome_size = CHROMOSOME_SIZE
+  )
+  expect_equal(
+    output, 0
+  )
+})
+
 # SPQValidate ####
-# TODO
+
 
 

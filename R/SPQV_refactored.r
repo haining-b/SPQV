@@ -229,15 +229,10 @@ QTLPlacementProbabilities <-
         if (placement_type == "extension") {
           remaining_markers <-
             rbind(remaining_markers_lr, remaining_markers_rl)
-          print(qtl_ext_length)
-          print(remaining_markers_lr)
-          print(remaining_markers_rl) # DO NOT SUBMIT
         } else if (placement_type == "centered") {
           # only use markers that are OK in both directions, and only count each once
           remaining_markers <-
             remaining_markers_lr[which(remaining_markers_lr$Base >= first_avail_base), ]
-          print(qtl_ext_length)
-          print(remaining_markers) # DO NOT SUBMIT
         }
 
         length_remaining_markers <- nrow(remaining_markers)
@@ -250,10 +245,7 @@ QTLPlacementProbabilities <-
 
     return(marker_probs)
   }
-# output <- QTLPlacementProbabilities( # DO NOT SUBMIT
-#   QTL_LIST, "extension",
-#   SectionMarkers(MARKER_LIST, nrow(CHROMOSOME_SIZE)), CHROMOSOME_SIZE)
-# output
+
 
 CountGenesFound <-
   function(qtl_list,
@@ -323,6 +315,53 @@ CountGenesFound <-
 
     return(trait_qtl_list)
   }
+
+GeneFoundLikelihood <- function(
+  gene_chr, gene_locus,
+  qtl_ext_length, placement_type,
+  per_marker_likelihood, sectioned_marker_list,
+  chromosome_size
+  ) {
+  markers_on_chromosome <- sectioned_marker_list[[gene_chr]]
+  chr_marker_positions <- markers_on_chromosome$Base
+
+  range_l <- gene_locus - qtl_ext_length
+  range_r <- gene_locus + qtl_ext_length
+
+  reachable_markers_on_l <-
+    markers_on_chromosome[which(
+      chr_marker_positions <= gene_locus &
+        chr_marker_positions >= range_l &
+        chr_marker_positions + qtl_ext_length <= chromosome_size$RightmostMarker[gene_chr]
+    ),]
+  reachable_markers_on_r <-
+    markers_on_chromosome[which(
+      # It's not >= so we don't double-count locus
+      chr_marker_positions > gene_locus &
+        chr_marker_positions <= range_r &
+        chr_marker_positions - qtl_ext_length >= chromosome_size$LeftmostMarker[gene_chr]
+    ),]
+  if (placement_type == "centered") {
+    # check that the other end of the QTL also won't hang off the end of the chromosome
+    reachable_markers_on_l <- reachable_markers_on_l[
+      which(reachable_markers_on_l$Base - qtl_ext_length >= chromosome_size$LeftmostMarker[gene_chr]),
+      ]
+    reachable_markers_on_r <- reachable_markers_on_r[
+      which(reachable_markers_on_r$Base + qtl_ext_length <= chromosome_size$RightmostMarker[gene_chr]),
+      ]
+  }
+  num_markers_avail <- nrow(reachable_markers_on_l) + nrow(reachable_markers_on_r)
+  gene_found_likelihood <- num_markers_avail * per_marker_likelihood
+
+  # Sometimes one of the multiplicands is of type 'levels' for some reason and then gene_found_likelihood is NA
+  #jfc I hate levels
+  #I think I had an as.numeric() in here somewhere to resolve that
+  if (length(gene_found_likelihood) == 0) {
+    gene_found_likelihood <- 0
+  }
+
+  return(gene_found_likelihood)
+}
 
 
 
@@ -471,6 +510,7 @@ SPQValidate <- function(qtl_list,
 
     for (qtl_i in 1:num_qtl) {
       random_gene_list$EGN <- 0
+
       if (placement_type == 'centered') {
         qtl_ext_length = qtl_gene_counts$Length[qtl_i] / 2
       } else if (placement_type == 'extension') {
@@ -483,45 +523,10 @@ SPQValidate <- function(qtl_list,
         sampled_gene_locus <- random_gene_list$GeneMiddle[gene_i]
         sampled_chr_number <- random_gene_list$Chromosome[gene_i]
 
-        markers_on_chromosome <- sectioned_marker_list[[sampled_chr_number]]
-        chr_marker_positions <- markers_on_chromosome$Base
+        gene_found_likelihood <- GeneFoundLikelihood(sampled_chr_number, sampled_gene_locus,
+                                                     qtl_ext_length, placement_type,
+                                                     per_marker_likelihood, sectioned_marker_list)
 
-        range_l <- sampled_gene_locus - qtl_ext_length
-        range_r <- sampled_gene_locus + qtl_ext_length
-
-        reachable_markers_on_l <-
-          markers_on_chromosome[which(
-            chr_marker_positions <= sampled_gene_locus &
-            chr_marker_positions >= range_l &
-            chr_marker_positions + qtl_ext_length <= chromosome_size$RightmostMarker[sampled_chr_number]
-          ),]
-
-        reachable_markers_on_r <-
-          markers_on_chromosome[which(
-            # It's not >= so we don't double-count locus
-            chr_marker_positions > sampled_gene_locus &
-            chr_marker_positions <= range_r &
-            chr_marker_positions - qtl_ext_length >= chromosome_size$LeftmostMarker[sampled_chr_number]
-          ),]
-
-        if (placement_type == "centered") {
-          # check that the other end of the QTL also won't hang off the end of the chromosome
-          reachable_markers_on_l <- reachable_markers_on_l[
-            which(reachable_markers_on_l$Base - qtl_ext_length >= chromosome_size$LeftmostMarker[sampled_chr_number])
-          ]
-          reachable_markers_on_r <- reachable_markers_on_r[
-            which(reachable_markers_on_r$Base + qtl_ext_length <= chromosome_size$RightmostMarker[sampled_chr_number])
-          ]
-        }
-
-        num_markers_avail <- nrow(reachable_markers_on_l) + nrow(reachable_markers_on_r)
-        gene_found_likelihood <- num_markers_avail * per_marker_likelihood
-        # Sometimes one of the multiplicands is of type 'levels' for some reason and then gene_found_likelihood is NA
-        #jfc I hate levels
-        #I think I had an as.numeric() in here somewhere to resolve that
-        if (length(gene_found_likelihood) == 0) {
-          gene_found_likelihood <- 0
-        }
         random_gene_list$EGN[gene_i] <-
           random_gene_list$EGN[gene_i] + gene_found_likelihood
       }
