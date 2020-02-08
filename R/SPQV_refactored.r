@@ -1,5 +1,5 @@
 
-validateDf <- function(df, req_cols, return_stripped = True) {
+validateDf <- function(df, req_cols) {
   req_names <- c()
   for (col in req_cols) {
     req_name <- col[1]
@@ -81,25 +81,14 @@ SectionMarkers <- function(marker_list, num_chromosomes) {
 
 FilterGeneList <-
   function(trait,
-           placement_type,
            gene_list,
-           marker_list) {
+           marker_list,
+           drop_tandem = TRUE) {
     if (typeof(trait) != 'character') {
       stop("Trait input must be of type 'character'.")
     }
     trait <- tolower(trait)
     gene_list$Trait <- tolower(gene_list$Trait)
-
-    placement_types <- c("extension", "centered")
-    if (!(placement_type %in% placement_types)) {
-      stop(
-        sprintf(
-          "Unrecognized placement_type: %s. \nMust be one of: \n%s \n",
-          placement_type,
-          paste(placement_types, collapse = ", ")
-        )
-      )
-    }
 
     gene_list <- validateDf(gene_list, list(
       c("ID", "character"),
@@ -118,48 +107,45 @@ FilterGeneList <-
     trait_gene_list <- unique(trait_gene_list)
 
     if (nrow(trait_gene_list) == 0) {
-      stop('No genes for this trait.')
+      stop(sprintf('No genes for trait: %s.', trait))
     }
-    if (placement_type == 'centered' | nrow(trait_gene_list) == 1) {
+    if ( !drop_tandem | nrow(trait_gene_list) == 1) {
       return(trait_gene_list)
     }
-    if (placement_type == 'extension') {
-      marker_list$Trait <- "Marker"
-      loci_list <- rbind(marker_list, trait_gene_list)
-      loci_list <-
-        loci_list[order(loci_list$Chromosome, loci_list$Base), ]
-      gene_spots<-which(loci_list$Trait==trait)
-      tandem_arrays <- c()
-      # TODO ask whats happening here, leaving rest of func alone bc i dont know
-      for (i in 2:length(gene_spots)) {
-        if (gene_spots[i] == gene_spots[i - 1] + 1) {
-          tandem_arrays[i] <- 1
-          tandem_arrays[i - 1] <- 1
-        } else{
-          tandem_arrays[i] <- 0
-        }
+
+    marker_list$Trait <- "Marker"
+    loci_list <- rbind(marker_list, trait_gene_list)
+    loci_list <-
+      loci_list[order(loci_list$Chromosome, loci_list$Base), ]
+    gene_spots<-which(loci_list$Trait==trait)
+    tandem_arrays <- c()
+    # TODO is equiv to saving prev marker, shuffling, and then dropping dups?
+    for (i in 2:length(gene_spots)) {
+      if (gene_spots[i] == gene_spots[i - 1] + 1) {
+        tandem_arrays[i] <- 1
+        tandem_arrays[i - 1] <- 1
+      } else{
+        tandem_arrays[i] <- 0
       }
-      if (is.na(tandem_arrays[1])) {
-        tandem_arrays[1] <- 0
+    }
+    if (is.na(tandem_arrays[1])) {
+      tandem_arrays[1] <- 0
+    }
+    sequential_increases <- rle(tandem_arrays)
+    vals <- sequential_increases$values
+    longs <- sequential_increases$lengths
+    presence_absence <- c()
+    for (seq_i in 1:length(vals)) {
+      if (vals[seq_i] == 0) {
+        presence_absence <- c(presence_absence, rep(1, longs[seq_i]))
       }
-      sequential_increases <- rle(tandem_arrays)
-      vals <- sequential_increases$values
-      longs <- sequential_increases$lengths
-      presence_absence <- c()
-      for (seq_i in 1:length(vals)) {
-        if (vals[seq_i] == 0) {
-          presence_absence <- c(presence_absence, rep(1, longs[seq_i]))
-        }
-        else{
-          pos_selected <- sample(1:longs[seq_i], 1)
-          low_substitute_zeroes <- rep(0, (pos_selected - 1))
-          high_substitute_zeroes <- rep(0, longs[seq_i] - pos_selected)
-          all_subs <- c(low_substitute_zeroes, 1, high_substitute_zeroes)
-          presence_absence <- c(presence_absence, all_subs)
-        }
+      else{
+        pos_selected <- sample(1:longs[seq_i], 1)
+        low_substitute_zeroes <- rep(0, (pos_selected - 1))
+        high_substitute_zeroes <- rep(0, longs[seq_i] - pos_selected)
+        all_subs <- c(low_substitute_zeroes, 1, high_substitute_zeroes)
+        presence_absence <- c(presence_absence, all_subs)
       }
-      # TODO orig return was here, moved it bc assuming that was unintentional?
-      #probs ok, testing isn't showing problems
     }
     return(unique(trait_gene_list[grep(1, presence_absence), ]))
   }
@@ -175,9 +161,6 @@ QTLPlacementProbabilities <-
       c("LeftmostMarker", "integer"),
       c("RightmostMarker", "integer"),
       c("Trait", "character"),
-      c("Treatment", "character"),
-      c("Method", "character"),
-      c("ExptType", "character"),
       c("Length", "integer")
     ))
 
@@ -232,37 +215,50 @@ QTLPlacementProbabilities <-
         last_marker <-
           chromosome_size$RightmostMarker[chr_i]
 
-        first_avail_marker <- first_marker + qtl_ext_length
-        last_avail_marker <- last_marker - qtl_ext_length
+        first_avail_base <- first_marker + qtl_ext_length
+        last_avail_base <- last_marker - qtl_ext_length
 
         chr_markers <-sectioned_marker_list[chr_i]
         chr_markers<-chr_markers[[1]]
 
         remaining_markers_lr <-
-          chr_markers[which(chr_markers$Base < last_avail_marker), ]
+          chr_markers[which(chr_markers$Base <= last_avail_base), ]
         remaining_markers_rl <-
-          chr_markers[which(chr_markers$Base > first_avail_marker), ]
+          chr_markers[which(chr_markers$Base >= first_avail_base), ]
 
-        remaining_markers <-
-          rbind(remaining_markers_lr, remaining_markers_rl)
+        if (placement_type == "extension") {
+          remaining_markers <-
+            rbind(remaining_markers_lr, remaining_markers_rl)
+          print(qtl_ext_length)
+          print(remaining_markers_lr)
+          print(remaining_markers_rl) # DO NOT SUBMIT
+        } else if (placement_type == "centered") {
+          # only use markers that are OK in both directions, and only count each once
+          remaining_markers <-
+            remaining_markers_lr[which(remaining_markers_lr$Base >= first_avail_base), ]
+          print(qtl_ext_length)
+          print(remaining_markers) # DO NOT SUBMIT
+        }
+
         length_remaining_markers <- nrow(remaining_markers)
 
         poss_positions[qtl_i, chr_i + 1] <-
           length_remaining_markers
-
-        probs <- 1 / rowSums(poss_positions[, 2:10])
       }
     }
+    marker_probs <- 1 / rowSums(poss_positions[, 2:ncol(poss_positions)])
 
-    return(probs)
+    return(marker_probs)
   }
+# output <- QTLPlacementProbabilities( # DO NOT SUBMIT
+#   QTL_LIST, "extension",
+#   SectionMarkers(MARKER_LIST, nrow(CHROMOSOME_SIZE)), CHROMOSOME_SIZE)
+# output
 
-
-CountGenes <-
+CountGenesFound <-
   function(qtl_list,
            trait,
-           placement_type,
-           gene_list,
+           trait_gene_list,
            marker_list) {
 
     qtl_list  <- validateDf(qtl_list, list(
@@ -270,9 +266,6 @@ CountGenes <-
       c("LeftmostMarker", "integer"),
       c("RightmostMarker", "integer"),
       c("Trait", "character"),
-      c("Treatment", "character"),
-      c("Method", "character"),
-      c("ExptType", "character"),
       c("Length", "integer")
     ))
 
@@ -280,27 +273,14 @@ CountGenes <-
       stop("Trait input must be of type 'character'.")
     }
     trait <- tolower(trait)
-    gene_list$Trait <- tolower(gene_list$Trait)
+    trait_gene_list$Trait <- tolower(trait_gene_list$Trait)
     qtl_list$Trait <- tolower(qtl_list$Trait)
-
-    placement_types <- c("extension", "centered")
-    if (!(placement_type %in% placement_types)) {
-      stop(
-        sprintf(
-          "Unrecognized placement_type: %s. \nMust be one of: \n%s \n",
-          placement_type,
-          paste(placement_types, collapse = ", ")
-        )
-      )
+    if (! all(trait_gene_list$Trait == trait)) {
+      stop(sprintf("Gene list should already be filtered to contain only trait %s; instead found %s",
+                   trait,
+                   unique(trait_gene_list$Trait)
+          ))
     }
-
-    trait_gene_list <-
-      FilterGeneList(
-        trait = trait,
-        placement_type = placement_type,
-        gene_list = gene_list,
-        marker_list = marker_list
-      )
 
     if (nrow(trait_gene_list) <= 1) {
       return(trait_gene_list)
@@ -313,31 +293,8 @@ CountGenes <-
     }
 
 
-    metadata_qtl_list<-trait_qtl_list[,c('Trait','Treatment',"Method","ExptType")]
-    groups_of_qtl<-unique(metadata_qtl_list)
-
-
-    for(grouping_i in 1:nrow(groups_of_qtl)){
-      tr<-groups_of_qtl$Treatment[grouping_i]
-      meth<-groups_of_qtl$Method[grouping_i]
-      ET<-groups_of_qtl$ExptType[grouping_i]
-      tra<-groups_of_qtl$Trait[grouping_i]
-
-     indices_for_grouping<-rownames(trait_qtl_list[trait_qtl_list$Treatment==tr &
-                                                     trait_qtl_list$Trait==tra &
-                                                     trait_qtl_list$ExptType==ET &
-                                                     trait_qtl_list$Method==meth,])
-     trait_qtl_list[indices_for_grouping,'NumQTL']<-paste0('Group',grouping_i)
-
-    }
-
-
-
     trait_qtl_list$NumGenes <- 0
     trait_qtl_list$FoundGeneIDs <- 0
-
-    identified_genes <- data.frame(matrix(ncol = ncol(trait_qtl_list)))
-    colnames(identified_genes) <- colnames(trait_qtl_list)
 
     for (qtl_i in 1:nrow(trait_qtl_list)) {
       qtl_chr <- trait_qtl_list$Chromosome[qtl_i]
@@ -355,58 +312,16 @@ CountGenes <-
         trait_qtl_list$NumGenes[qtl_i] <- trait_qtl_list$NumGenes[qtl_i] + 1
         trait_qtl_list$FoundGeneIDs[qtl_i] <-
           paste0(trait_qtl_list$FoundGeneIDs[qtl_i], " and ", trait_gene_list$ID[gene_i])
-        identified_genes <- rbind(identified_genes, trait_qtl_list[qtl_i, ])
-
-      }
-    }
-    identified_genes <- identified_genes[-1, ]  # remove initial NA row
-
-
-    identified_genes <-
-      identified_genes[, c(
-        colnames(trait_qtl_list)
-      )]  # double checking - keep
-    names(identified_genes)[names(identified_genes) == "NumQTL"] <- 'QTLGroup' # TODO change to rename
-    names(trait_qtl_list)[names(trait_qtl_list) == "NumQTL"] <- 'QTLGroup'
-    dedup_identified_genes <- identified_genes
-
-    if (nrow(identified_genes) == 0) {
-      # print(sprintf("No identified genes for trait: %s", trait))
-      return(trait_qtl_list)
-
-    } else if (nrow(identified_genes) == 1) {
-      dedup_identified_genes <- identified_genes
-
-    } else {
-      for (possible_duplicates in 1:(nrow(identified_genes) - 1)) {
-        if (all(
-          identified_genes[possible_duplicates, c(1:6)] ==  # TODO replace with col names
-          identified_genes[possible_duplicates + 1, c(1:6)]
-        )) {
-          dedup_identified_genes[possible_duplicates, ] <- 0
-        }
-      }
-      if (length(which(dedup_identified_genes$NumGenes == 0)) > 0) {
-        dedup_identified_genes <-
-          dedup_identified_genes[-which(dedup_identified_genes$NumGenes == 0), ]
       }
     }
 
-    empty_qtl <-
-      dplyr::setdiff(trait_qtl_list, dedup_identified_genes)
-
-    dedup_identified_genes$FoundGeneIDs<- sapply(
-      dedup_identified_genes$FoundGeneIDs,
+    # Remove original 0 in FoundGeneIDs
+    trait_qtl_list$FoundGeneIDs<- sapply(
+      trait_qtl_list$FoundGeneIDs,
       function(x) gsub("0 and ", "", x)  # TODO make a list instead of string
     )
-    if (nrow(empty_qtl) > 0) {
-      qtl_gene_counts <-
-        rbind(dedup_identified_genes, empty_qtl)
-    } else{
-      qtl_gene_counts <- dedup_identified_genes
-    }
 
-    return(qtl_gene_counts)
+    return(trait_qtl_list)
   }
 
 
@@ -422,18 +337,21 @@ SPQValidate <- function(qtl_list,
                         chromosome_size,
                         simulation_env,
                         progress_bar=TRUE) {
-  ############################
-  ######Checking inputs#######
-  ############################
 
+  ######Checking inputs#######
+
+  # Split qtl_list into 2 dfs - metadata only needed for grouping
+  qtl_metadata <- validateDf(qtl_list, list(
+    c("Trait", "character"),
+    c("Treatment", "character"),
+    c("Method", "character"),
+    c("ExptType", "character")
+  ))
   qtl_list <- validateDf(qtl_list, list(
     c("Chromosome", "integer"),
     c("LeftmostMarker", "integer"),
     c("RightmostMarker", "integer"),
     c("Trait", "character"),
-    c("Treatment", "character"),
-    c("Method", "character"),
-    c("ExptType", "character"),
     c("Length", "integer")  # TODO is this superfluous? (or is Rightmost/leftmost? prob not bc need real gene count, but do we return that?)
   ))# need it later, doesn't need to be in the list at the start.
 
@@ -494,43 +412,37 @@ SPQValidate <- function(qtl_list,
   if (!(typeof(num_repetitions) %in% c('integer','double','numeric'))) {
     stop("num_repetitions must be an numeric,integer, or double value (i.e. 1000).")
   }
-  #####
-  #####
-  #####
 
-  qtl_of_interest <- CountGenes(
+  # end validation #########
+
+  trait_gene_list <- FilterGeneList(
     trait = trait,
-    placement_type = placement_type,
+    gene_list = gene_list,
+    marker_list = marker_list,
+    drop_tandem = (placement_type != "centered")
+  )
+
+  qtl_gene_counts <- CountGenesFound(
+    trait = trait,
     qtl_list = qtl_list,
-    gene_list = gene_list,
+    trait_gene_list = trait_gene_list,
     marker_list = marker_list
   )
-  if (nrow(qtl_of_interest) <= 1) {
+  if (nrow(qtl_gene_counts) <= 1) {
     # TODO Why does everything become "double" if there's only one row?
-    qtl_of_interest$Chromosome <- as.integer(qtl_of_interest$Chromosome)
-    qtl_of_interest$Length <- as.integer(qtl_of_interest$Length)
-    qtl_of_interest$LeftmostMarker <- as.integer(qtl_of_interest$LeftmostMarker)
-    qtl_of_interest$RightmostMarker <- as.integer(qtl_of_interest$RightmostMarker)
+    qtl_gene_counts$Chromosome <- as.integer(qtl_gene_counts$Chromosome)
+    qtl_gene_counts$Length <- as.integer(qtl_gene_counts$Length)
+    qtl_gene_counts$LeftmostMarker <- as.integer(qtl_gene_counts$LeftmostMarker)
+    qtl_gene_counts$RightmostMarker <- as.integer(qtl_gene_counts$RightmostMarker)
   }
 
 
-  gene_list <- FilterGeneList(
-    trait = trait,
-    placement_type = placement_type,
-    gene_list = gene_list,
-    marker_list = marker_list
-  )
-  gene_list <-
-    subset(gene_list, select = c(ID, Chromosome, Base))
-
-
-  #qtl_of_interest <- qtl_of_interest[which(qtl_of_interest$Trait==trait),]
-  num_qtl <- nrow(qtl_of_interest)
-  if (sum(qtl_of_interest$Length) == 0) {
-    qtl_of_interest$Length <-
-      qtl_of_interest$RightmostMarker - qtl_of_interest$LeftmostMarker
+  num_qtl <- nrow(qtl_gene_counts)
+  if (sum(qtl_gene_counts$Length) == 0) {
+    qtl_gene_counts$Length <-
+      qtl_gene_counts$RightmostMarker - qtl_gene_counts$LeftmostMarker
   }
-  num_genes <- nrow(gene_list)
+  num_genes <- nrow(trait_gene_list)
   num_chromosomes <- nrow(chromosome_size)
   output <-
     as.data.frame(matrix(
@@ -549,7 +461,7 @@ SPQValidate <- function(qtl_list,
 
   qtl_probs <- QTLPlacementProbabilities(
     placement_type = placement_type,
-    qtl_list = qtl_of_interest,
+    qtl_list = qtl_gene_counts,
     sectioned_marker_list = sectioned_marker_list,
     chromosome_size = chromosome_size
   )
@@ -560,55 +472,58 @@ SPQValidate <- function(qtl_list,
     for (qtl_i in 1:num_qtl) {
       random_gene_list$EGN <- 0
       if (placement_type == 'centered') {
-        qtl_ext_length = qtl_of_interest$Length[qtl_i] / 2
+        qtl_ext_length = qtl_gene_counts$Length[qtl_i] / 2
       } else if (placement_type == 'extension') {
-        qtl_ext_length = qtl_of_interest$Length[qtl_i]
+        qtl_ext_length = qtl_gene_counts$Length[qtl_i]
       }
 
-      known_likelihood <- qtl_probs[qtl_i]  # TODO call qtl_chr_likelihood?
+      per_marker_likelihood <- qtl_probs[qtl_i]
 
       for (gene_i in 1:num_genes) {
         sampled_gene_locus <- random_gene_list$GeneMiddle[gene_i]
         sampled_chr_number <- random_gene_list$Chromosome[gene_i]
 
-        # TODO was this instead - keep in case my change doesn't work
-        # markers_on_chromosome <-
-        #   as.data.frame(as.matrix(eval(as.name(
-        #     sectioned_marker_list[chr_number]
-        #   ))))
         markers_on_chromosome <- sectioned_marker_list[[sampled_chr_number]]
         chr_marker_positions <- markers_on_chromosome$Base
 
         range_l <- sampled_gene_locus - qtl_ext_length
         range_r <- sampled_gene_locus + qtl_ext_length
 
-        markers_l <-
+        reachable_markers_on_l <-
           markers_on_chromosome[which(
-            chr_marker_positions + qtl_ext_length <= chromosome_size$RightmostMarker[sampled_chr_number] &
-              chr_marker_positions <= sampled_gene_locus &
-              chr_marker_positions >= range_l
+            chr_marker_positions <= sampled_gene_locus &
+            chr_marker_positions >= range_l &
+            chr_marker_positions + qtl_ext_length <= chromosome_size$RightmostMarker[sampled_chr_number]
           ),]
-        length_markers_l <- nrow(markers_l)
 
-        markers_r <-
+        reachable_markers_on_r <-
           markers_on_chromosome[which(
-            chr_marker_positions - qtl_ext_length >= chromosome_size$LeftmostMarker[sampled_chr_number] &
-              # It's not >= so we don't double-count locus
-              chr_marker_positions > as.numeric(sampled_gene_locus) &
-              chr_marker_positions <= range_r
+            # It's not >= so we don't double-count locus
+            chr_marker_positions > sampled_gene_locus &
+            chr_marker_positions <= range_r &
+            chr_marker_positions - qtl_ext_length >= chromosome_size$LeftmostMarker[sampled_chr_number]
           ),]
-        length_markers_r <- nrow(markers_r)
 
-        num_markers_avail <- length_markers_l + length_markers_r
-        num_markers_expect <- num_markers_avail * known_likelihood
-        # Sometimes one of the multiplicands is of type 'levels' for some reason and then num_markers_expect is NA
+        if (placement_type == "centered") {
+          # check that the other end of the QTL also won't hang off the end of the chromosome
+          reachable_markers_on_l <- reachable_markers_on_l[
+            which(reachable_markers_on_l$Base - qtl_ext_length >= chromosome_size$LeftmostMarker[sampled_chr_number])
+          ]
+          reachable_markers_on_r <- reachable_markers_on_r[
+            which(reachable_markers_on_r$Base + qtl_ext_length <= chromosome_size$RightmostMarker[sampled_chr_number])
+          ]
+        }
+
+        num_markers_avail <- nrow(reachable_markers_on_l) + nrow(reachable_markers_on_r)
+        gene_found_likelihood <- num_markers_avail * per_marker_likelihood
+        # Sometimes one of the multiplicands is of type 'levels' for some reason and then gene_found_likelihood is NA
         #jfc I hate levels
         #I think I had an as.numeric() in here somewhere to resolve that
-        if (length(num_markers_expect) == 0) {
-          num_markers_expect <- 0
+        if (length(gene_found_likelihood) == 0) {
+          gene_found_likelihood <- 0
         }
         random_gene_list$EGN[gene_i] <-
-          random_gene_list$EGN[gene_i] + num_markers_expect
+          random_gene_list$EGN[gene_i] + gene_found_likelihood
       }
 
       sim_egn <- sum(random_gene_list$EGN)
@@ -624,55 +539,68 @@ SPQValidate <- function(qtl_list,
 
   simulation_env$SimulationDataFrame <- output
 
-  std_devs <- apply(output, MARGIN = 1, FUN = sd)
+  std_devs <- apply(output, MARGIN = 1, FUN = sd)  # 1 means row-wise
   upper <- c()
+  center <- c()
   lower <- c()
 
-  for (qtl_i in 1:nrow(qtl_of_interest)) {
+  for (qtl_i in 1:nrow(qtl_gene_counts)) {
     z_value <-
       qnorm(.025,
             lower.tail = FALSE)
     mu <- rowMeans(output)[qtl_i]
+
+    center <- c(center, mu)
     upper <- c(upper, mu + z_value * std_devs[qtl_i])
     lower <- c(lower, mu - z_value * std_devs[qtl_i])
   }
   #dealing with multiple testing
-  upper_sum_of_CIstoSum<-c()
-  lower_sum_of_CIstoSum<-c()
   #gotta do the triathalon math
   #as in https://stats.stackexchange.com/questions/223924/how-to-add-up-partial-confidence-intervals-to-create-a-total-confidence-interval?fbclid=IwAR0mz3ypdVGQjopYytJnfrXA6o50MJyZ0OAxnUHcwE7kBRKbGqGiEUY6mSY
-  
-  for(grouping_i in unique(qtl_of_interest$QTLGroup)){
-    CIstoSum_indices<-which(qtl_of_interest$QTLGroup==grouping_i)
-    center_list<-c()
-    radius_list<-c()
-    for (distribution_i in CIstoSum_indices){
-      dist_ctr<-upper[CIstoSum_indices]-lower[CIstoSum_indices]
-      center_list<-c(center_list,dist_ctr)
-      dist_radius<-upper[CIstoSum_indices]-dist_ctr
-      sqr_rad<-dist_radius^2
-      radius_list<-c(radius_list,sqr_rad)
-    }
-    adjusted_center<-mean(center_list)
-    adjusted_radius<-sqrt(sum(radius_list))
-    
-    
-    upper_sum_of_CIstoSum[CIstoSum_indices]<-rep(sum(adjusted_center,adjusted_radius),length(CIstoSum_indices))
-    lower_sum_of_CIstoSum[CIstoSum_indices]<-rep((adjusted_center-adjusted_radius),length(CIstoSum_indices))
+  upper_sum_of_CIstoSum<-c()
+  lower_sum_of_CIstoSum<-c()
 
+  # group by ('Trait','Treatment',"Method","ExptType") by hand bc plyr wasn't cooperating
+  metadata_qtl_list<-qtl_metadata[,c('Trait','Treatment',"Method","ExptType")]
+  groups_of_qtl<-unique(metadata_qtl_list)
+  for(grouping_i in 1:nrow(groups_of_qtl)){
+    tr<-groups_of_qtl$Treatment[grouping_i]
+    meth<-groups_of_qtl$Method[grouping_i]
+    ET<-groups_of_qtl$ExptType[grouping_i]
+    tra<-groups_of_qtl$Trait[grouping_i]
+
+    indices_for_grouping<-rownames(qtl_gene_counts[qtl_gene_counts$Treatment==tr &
+                                                     qtl_gene_counts$Trait==tra &
+                                                     qtl_gene_counts$ExptType==ET &
+                                                     qtl_gene_counts$Method==meth,])
+    qtl_gene_counts[indices_for_grouping,'QTLGroup']<-paste0('Group',grouping_i)
+  }
+
+  for(grouping_i in unique(qtl_gene_counts$QTLGroup)){
+    CIstoSum_indices<-which(qtl_gene_counts$QTLGroup==grouping_i)
+
+    dist_ctr <- center[CIstoSum_indices]
+    dist_radius<-upper[CIstoSum_indices] - dist_ctr
+    sqr_rad<-dist_radius^2
+
+    adjusted_center<-mean(dist_ctr)
+    adjusted_radius<-sqrt(sum(sqr_rad))
+
+    upper_sum_of_CIstoSum[CIstoSum_indices]<- adjusted_center + adjusted_radius
+    lower_sum_of_CIstoSum[CIstoSum_indices]<- adjusted_center - adjusted_radius
   }
 
 
   conf_ints <-
     as.data.frame(as.matrix(
       cbind(
-        qtl_of_interest$Length,
-        qtl_of_interest$NumGenes,
+        qtl_gene_counts$Length,
+        qtl_gene_counts$NumGenes,
         rowMeans(output),
         std_devs,
         lower,
-        lower_sum_of_CIstoSum,
         upper,
+        lower_sum_of_CIstoSum,
         upper_sum_of_CIstoSum
 
      )
@@ -684,8 +612,8 @@ SPQValidate <- function(qtl_list,
       "Mean",
       "SEM",
       "Lower 95% CI",
-      "Additive Lower 95% CI",
       "Upper 95% CI",
+      "Additive Lower 95% CI",
       "Additive Upper 95% CI")
   return(conf_ints)
 }
