@@ -226,5 +226,23 @@ test_that("GeneFoundLikelihood returns 0 when QTL can't be placed", {
 
 # SPQValidate ####
 
-
-
+test_that("SPQValidate produces reasonable output", {
+  output <- SPQValidate(
+    QTL_LIST,
+    TRAIT,
+    10,
+    "extension",
+    GENE_LIST,
+    MARKER_LIST,
+    WGD,
+    CHROMOSOME_SIZE,
+    new.env(),
+    progress_bar = FALSE
+  )
+  expect_equal(output$`Observed Value`, c(0, 1, 1, 3))
+  # should be monotonic wrt QTL size since the fake chromosomes are p regular
+  expect_equal(output$Mean, sort.default(output$Mean))
+  expect_true(all(output$`Lower 95% CI` <= output$`Upper 95% CI`))
+  expect_true(all(output$`Additive Lower 95% CI` <= output$`Additive Upper 95% CI`))
+  expect_length(unique(output$`Additive Lower 95% CI`), 1)
+})

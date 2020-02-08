@@ -416,8 +416,6 @@ SPQValidate <- function(qtl_list,
 
   whole_genome_gene_dist <- validateDf(whole_genome_gene_dist, list(  # rename as whole_genome_gene_list #eh it's a df though  # wait gene_list, marker_list etc aren't dfs?? WHAT IS R EVEN
     c("Chromosome", "integer"),
-    c("GeneStart", "integer"),  # Def superfluous - never used #yep
-    c("GeneEnd", "integer"), # Def superfluous - never used #yep
     c("GeneMiddle", "integer")  # see above - rename to locus?
   ))
 
@@ -525,7 +523,8 @@ SPQValidate <- function(qtl_list,
 
         gene_found_likelihood <- GeneFoundLikelihood(sampled_chr_number, sampled_gene_locus,
                                                      qtl_ext_length, placement_type,
-                                                     per_marker_likelihood, sectioned_marker_list)
+                                                     per_marker_likelihood, sectioned_marker_list,
+                                                     chromosome_size)
 
         random_gene_list$EGN[gene_i] <-
           random_gene_list$EGN[gene_i] + gene_found_likelihood
@@ -559,6 +558,7 @@ SPQValidate <- function(qtl_list,
     upper <- c(upper, mu + z_value * std_devs[qtl_i])
     lower <- c(lower, mu - z_value * std_devs[qtl_i])
   }
+
   #dealing with multiple testing
   #gotta do the triathalon math
   #as in https://stats.stackexchange.com/questions/223924/how-to-add-up-partial-confidence-intervals-to-create-a-total-confidence-interval?fbclid=IwAR0mz3ypdVGQjopYytJnfrXA6o50MJyZ0OAxnUHcwE7kBRKbGqGiEUY6mSY
@@ -567,18 +567,21 @@ SPQValidate <- function(qtl_list,
 
   # group by ('Trait','Treatment',"Method","ExptType") by hand bc plyr wasn't cooperating
   metadata_qtl_list<-qtl_metadata[,c('Trait','Treatment',"Method","ExptType")]
+  if (! all(rownames(metadata_qtl_list) == rownames(qtl_gene_counts))) {
+    stop("Probably runtime error: Rownames for metadata_qtl_list don't match qtl_gene_counts.")
+  }
   groups_of_qtl<-unique(metadata_qtl_list)
   for(grouping_i in 1:nrow(groups_of_qtl)){
-    tr<-groups_of_qtl$Treatment[grouping_i]
-    meth<-groups_of_qtl$Method[grouping_i]
-    ET<-groups_of_qtl$ExptType[grouping_i]
-    tra<-groups_of_qtl$Trait[grouping_i]
+    tr <- groups_of_qtl$Treatment[grouping_i]
+    meth <- groups_of_qtl$Method[grouping_i]
+    ET <- groups_of_qtl$ExptType[grouping_i]
+    tra <- groups_of_qtl$Trait[grouping_i]
 
-    indices_for_grouping<-rownames(qtl_gene_counts[qtl_gene_counts$Treatment==tr &
-                                                     qtl_gene_counts$Trait==tra &
-                                                     qtl_gene_counts$ExptType==ET &
-                                                     qtl_gene_counts$Method==meth,])
-    qtl_gene_counts[indices_for_grouping,'QTLGroup']<-paste0('Group',grouping_i)
+    indices_for_grouping <- rownames(metadata_qtl_list[metadata_qtl_list$Treatment==tr &
+                                                       metadata_qtl_list$Trait==tra &
+                                                       metadata_qtl_list$ExptType==ET &
+                                                       metadata_qtl_list$Method==meth,])
+    qtl_gene_counts[indices_for_grouping,'QTLGroup'] <- paste0('Group',grouping_i)
   }
 
   for(grouping_i in unique(qtl_gene_counts$QTLGroup)){
