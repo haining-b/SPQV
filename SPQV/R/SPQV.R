@@ -596,7 +596,7 @@ SPQValidate <- function(qtl_list,
       data = 0
     ))
   if (progress_bar) {
-    pb <- txtProgressBar(0, 1, style = 3)
+    pb <- utils::txtProgressBar(0, 1, style = 3)
   }
 
 
@@ -642,7 +642,7 @@ SPQValidate <- function(qtl_list,
       output[qtl_i, rep_i] <- sim_egn
 
       if (progress_bar) {
-        setTxtProgressBar(pb, qtl_i + ((rep_i-1)*num_qtl) / (num_qtl * num_repetitions))
+        utils::setTxtProgressBar(pb, qtl_i + ((rep_i-1)*num_qtl) / (num_qtl * num_repetitions))
       }
     }
   }
@@ -651,14 +651,14 @@ SPQValidate <- function(qtl_list,
 
   simulation_env$SimulationDataFrame <- output
 
-  std_devs <- apply(output, MARGIN = 1, FUN = sd)  # 1 means row-wise
+  std_devs <- apply(output, MARGIN = 1, FUN = stats::sd)  # 1 means row-wise
   upper <- c()
   center <- c()
   lower <- c()
 
   for (qtl_i in 1:nrow(qtl_gene_counts)) {
     z_value <-
-      qnorm(.025,
+      stats::qnorm(.025,
             lower.tail = FALSE)
     mu <- rowMeans(output)[qtl_i]
 
