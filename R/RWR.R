@@ -164,231 +164,262 @@ RWR <- function(
 ceiling(BootStrapConfidenceIntervals)
 colnames(BootStrapConfidenceIntervals)<-Relevant_QTL$Length
 
-
-#Singles Heat Map
-
-HBVSinglesDifferenceMatrix<-as.data.frame(matrix(nrow=8,ncol=length(BootStrapConfidenceIntervals)))
-colnames(HBVSinglesDifferenceMatrix)<-Relevant_QTL$Length
-
-for (Experiment in 1:length(BootStrapConfidenceIntervals)){
-  DifferenceFromHBV=ceiling(BootStrapConfidenceIntervals[1:8,Experiment])-ceiling(EndGameSingles[Experiment,4])
-  HBVSinglesDifferenceMatrix[,Experiment]<-DifferenceFromHBV
+BS_333<-read.csv('333 Genes Bootstrap BCa CIs.csv',stringsAsFactors = F)
+HBV_333<-read.csv("HBVOutputfor333_200QTL_6_28.csv",stringsAsFactors = F)
+PercentDiffMatrix<-as.data.frame(matrix(nrow=8,ncol=length(HBV_333$QTL)))
+colnames(PercentDiffMatrix)<-HBV_333$QTL
+for(shannon in 1: length(HBV_333$QTL)){
+  percentDiff<-BS_333[,shannon]/HBV_333[shannon,6]
+  PercentDiffMatrix[,shannon]<-percentDiff
 }
 
-HBVSinglesDifferenceMatrix<-HBVSinglesDifferenceMatrix[,order(Relevant_QTL$Length) ]
 
-numHBVSinglesDifference<-sapply(HBVSinglesDifferenceMatrix,as.numeric)
+library(gplots)
+breaks = seq(min(na.omit(as.numeric(unlist(PercentDiffMatrix)))),
+             max(abs(na.omit(as.numeric(unlist(PercentDiffMatrix))))),
+             length.out=13) 
+gradient1 = colorpanel( sum( breaks<=1), rgb(0,146,146,max=255), "ghostwhite" )
+gradient2 = colorpanel( sum( breaks>1 ), "ghostwhite", rgb(73,0,146,max=255) )
+hm.colors = c(gradient1,gradient2)
+#Getting row means
+RowMeanPerc<-c()
+for(r in 1:8){
+  CurrentRow<-PercentDiffMatrix[r,]
+  CR<-CurrentRow[!is.na(CurrentRow)]
+  CR<-abs(CR)
+  RowMeanPerc<-c(RowMeanPerc,(mean(CR)))
+}
+PercentDiffMatrix<-cbind(PercentDiffMatrix,RowMeanPerc)
+numPercentDiffMatrix<-sapply(PercentDiffMatrix,as.numeric)
+
+colnames(numPercentDiffMatrix)[200]<-'Mean'
+par(mar=c(10, 8, 8, 3) + 0.1)
+heatmap.2(numPercentDiffMatrix,dendrogram='none',
+          trace="none",Colv=F,Rowv=F,col=hm.colors,srtCol = 45,
+          #cellnote = round(numHBVSinglesDifference), notecol = 'black',notecex=.7,
+          main='Comparison of Bootstrapping methods to the Haining-Blumer Validator; Percent', 
+          denscol='black',
+          na.color='lightslategrey')
+
+
+
+
+
+
+RoundPercentDiffMatrix<-as.data.frame(matrix(nrow=8,ncol=length(HBV_333$QTL)))
+colnames(RoundPercentDiffMatrix)<-HBV_333$QTL
+
+for(shannon in 1: length(HBV_333$QTL)){
+  for(pants in 1:8){
+    BS<-round(as.numeric(BS_333[pants,shannon]))
+    HBV<-round(as.numeric(HBV_333[shannon,6]))
+    
+    if(BS==1 &HBV==0){
+      print("inf!")
+      RoundPercentDiffMatrix[pants,shannon]<-NA
+    }
+    if(BS==0 &HBV==1){
+      print("WTF")
+      RoundPercentDiffMatrix[pants,shannon]<-NA
+    }
+    if(BS==0 & HBV==0){
+      print("0!")
+      RoundPercentDiffMatrix[pants,shannon]<-1
+    }
+    else{
+      RoundPercentDiffMatrix[pants,shannon]<-BS/HBV
+    }
+  }
+  
+}
+RoundPercentDiffMatrix[ sapply(RoundPercentDiffMatrix,is.infinite)]<-NA
+breaks = seq(min(na.omit(as.numeric(unlist(RoundPercentDiffMatrix)))),
+             max(abs(na.omit(as.numeric(unlist(RoundPercentDiffMatrix))))),
+             length.out=10)
+gradient1 = colorpanel( sum( breaks<1), rgb(0,146,146,max=255), "ghostwhite" )
+gradient2 = colorpanel( sum( breaks>1 ), "ghostwhite", rgb(73,0,146,max=255) )
+hm.colors = c(gradient1,gradient2)
+
+rRowMeanPerc<-c()
+for(r in 1:8){
+  CurrentRow<-RoundPercentDiffMatrix[r,]
+  CR<-CurrentRow[!is.na(CurrentRow)]
+  CR<-abs(CR)
+  rRowMeanPerc<-c(rRowMeanPerc,(mean(CR)))
+}
+RoundPercentDiffMatrix<-cbind(RoundPercentDiffMatrix,rRowMeanPerc)
+numRoundPercentDiffMatrix<-sapply(RoundPercentDiffMatrix,as.numeric)
+
+heatmap.2 (numRoundPercentDiffMatrix,dendrogram='none',
+           trace="none",Colv=F,Rowv=F,col=hm.colors,srtCol = 45,
+           #cellnote = round(numHBVSinglesDifference), notecol = 'black',notecex=.7,
+           main='Comparison of Bootstrapping methods to the Haining-Blumer Validator', 
+           denscol='black',
+           na.color='lightslategrey')
+
+
+
+
+
+
+
+
+
+
+#w/ rounded nums
+
+breaks = seq(min(na.omit(as.numeric(unlist(ceiling(HBVSinglesDifferenceMatrix))))),
+             max(abs(na.omit(as.numeric(unlist(ceiling(HBVSinglesDifferenceMatrix)))))),
+             length.out=9)
+gradient1 = colorpanel( sum( breaks[-1]<=0)+1, "deeppink4", "floralwhite" )
+gradient2 = colorpanel( sum( breaks[-1]>0 )-1, "floralwhite", "aquamarine4" )
+hm.colors = c(gradient1,gradient2)
+formatC(numb, format = "e", digits = 2)
+colnames(numHBVSinglesDifference)<-formatC(as.numeric(colnames(numHBVSinglesDifference)), format = "e", digits = 2)
+colnames(numHBVSinglesDifference)[52]<-"Mean"
+cf<-as.data.frame(numHBVSinglesDifference)
+celifloor<-numHBVSinglesDifference
+for(x in 1:length(cf)){
+  for (y in 1:length(cf$Mean)){
+    if(cf[y,x]>0){
+      celifloor[y,x]<-ceiling(cf[y,x])
+    }
+    if(cf[y,x]<0){
+      celifloor[y,x]<-floor(cf[y,x])
+    }
+  }
+}
+
+breaks = seq(min(na.omit(as.numeric(unlist(celifloor)))),
+             max(abs(na.omit(as.numeric(unlist(celifloor))))),
+             length.out=9)
+gradient1 = colorpanel( sum( breaks[-1]<=0), "deeppink4", "floralwhite" )
+gradient2 = colorpanel( sum( breaks[-1]>0 ), "floralwhite", "aquamarine4" )
+gradient2<-gradient2[2:4]
+hm.colors = c(gradient1,gradient2)
+heatmap.2(celifloor,dendrogram='none',#ceiling(numHBVSinglesDifference),dendrogram='none',
+          trace="none",Colv=F,Rowv=F,col=hm.colors,srtCol = 45,
+          #cellnote = celifloor, notecol = 'black',notecex=.7,
+          sepwidth=c(0.01,0.01),
+          sepcolor="white",
+          colsep=1:ncol(numHBVSinglesDifference),
+          rowsep=1:nrow(numHBVSinglesDifference),
+          main='Comparison of Bootstrapping methods to the Haining-Blumer Validator',
+          na.color='lightslategrey')
+
+#o....kay? absolute values?
 
 AbsDiffMatrix<-abs(numHBVSinglesDifference)
+breaks = seq(min(na.omit(as.numeric(unlist(AbsDiffMatrix)))),
+             max(abs(na.omit(as.numeric(unlist(AbsDiffMatrix))))),
+             length.out=101)
+gradient2 = colorpanel( sum( breaks[-1]>0 ), "white", "aquamarine4" )
+abs.hm.colors = gradient2
+heatmap.2(AbsDiffMatrix,dendrogram='none',
+          trace="none",Colv=F,Rowv=F,col=abs.hm.colors,srtCol = 45,
+          sepwidth=c(0.01,0.01),
+          cellnote = round(AbsDiffMatrix,1), notecol = 'black',notecex=.7,
+          sepcolor="white",
+          colsep=1:ncol(numHBVSinglesDifference),
+          rowsep=1:nrow(numHBVSinglesDifference),
+          main='Comparison of Bootstrapping methods to the Haining-Blumer Validator',
+          na.color='lightslategrey')
 
-SinglesAbsDiffMatrix<-as.data.frame(as.matrix(AbsDiffMatrix))
-SinglesAbsDiffMatrix[is.na(SinglesAbsDiffMatrix)]<-10
+breaks = seq(min(na.omit(as.numeric(unlist(round(AbsDiffMatrix))))),
+             max(abs(na.omit(as.numeric(unlist(round(AbsDiffMatrix)))))),
+             length.out=101)
+gradient2 = colorpanel( sum( breaks[-1]>0 ), "floralwhite", "aquamarine4" )
+abs.hm.colors = gradient2
 
-heatmap.2(as.matrix(SinglesAbsDiffMatrix),dendrogram='none',trace="none",Colv=F,Rowv=F,col=coul,main='withOUT dups',na.color='lightblue')
-#w/o the big bois
-heatmap.2(as.matrix(SinglesAbsDiffMatrix[,2:17]),dendrogram='none',trace="none",Colv=F,Rowv=F,col=coul,main='withOUT dups',na.color='lightblue')
 
-#Doubles Heat Map
-HBVDifferenceMatrixDups<-as.data.frame(matrix(nrow=8,ncol=length(BootStrapConfidenceIntervals)))
-colnames(HBVDifferenceMatrixDups)<-Relevant_QTL$Length
+heatmap.2(round(AbsDiffMatrix),dendrogram='none',
+          trace="none",Colv=F,Rowv=F,col=abs.hm.colors,srtCol = 45,
+          sepwidth=c(0.01,0.01),
+          cellnote = round(AbsDiffMatrix), notecol = 'black',notecex=.7,
+          sepcolor="white",
+          colsep=1:ncol(numHBVSinglesDifference),
+          rowsep=1:nrow(numHBVSinglesDifference),
+          main='Comparison of Bootstrapping methods to the Haining-Blumer Validator',
+          na.color='lightslategrey')
+#
 
-for (Experiment in 1:length(BootStrapConfidenceIntervals)){
-  DifferenceFromHBV=ceiling(BootStrapConfidenceIntervals[1:8,Experiment])-ceiling(EndGame[Experiment,4])
-  HBVDifferenceMatrixDups[,Experiment]<-DifferenceFromHBV
+
+
+
+
+
+faketargets<-WholeGenomeGeneDistribution[sample(1:length(WholeGenomeGeneDistribution$GeneStart),500),]
+
+interpolatedgenes<-as.data.frame(matrix(ncol=4,nrow=0))
+colnames(interpolatedgenes)<-colnames(MarkerList)
+for(i in 1:9){
+  MarkersOnChromosome<-eval(as.name(paste0('MarkersOnChromosome',i)))
+  MarkersOnChromosome$type<-'marker'
+  targetsonChr<-faketargets[which(faketargets$Chromosome==i),]
+  targetsonChr$type<-'gene'
+  targetsonChr$GeneID<-'genenomen'
+  targetsonChr<-targetsonChr[,c(4,1,2,3)]
+  colnames(targetsonChr)<-colnames(MarkersOnChromosome)
+  snoop<-rbind(MarkersOnChromosome,targetsonChr)
+  snoop<-snoop[order(snoop$Base),]
+  interpolatedgenes<-rbind(interpolatedgenes,snoop)
 }
 
-HBVDifferenceMatrixDups<-HBVDifferenceMatrixDups[,order(Relevant_QTL$Length)]
-
-numHBVDifferenceDups<-sapply(HBVDifferenceMatrixDups,as.numeric)
-AbsDiffMatrixDups<-abs(numHBVDifferenceDups)
-
-
-heatmap.2(as.matrix(DupsAbsDiffMatrix),dendrogram='none',trace="none",Colv=F,Rowv=F,col=coul,main='with dups',na.color='lightblue')
-heatmap.2(as.matrix(DupsAbsDiffMatrix[,2:17]),dendrogram='none',trace="none",Colv=F,Rowv=F,col=coul,main='withOUT dups',na.color='lightblue')
-
-
-#Singles and Doubles Heat Map
-
-bothDandS<-cbind(SinglesAbsDiffMatrix,DupsAbsDiffMatrix)
-heatmap.2(as.matrix(bothDandS)[,c(2:17,23:38)],dendrogram='none',trace="none",Colv=F,Rowv=F,col=coul,main='with dups',na.color='lightblue')
-
-
-#What if we only look at the ones we know are realistic
-
-heatmap.2(as.matrix(bothDandS[5:8,]),dendrogram='none',trace="none",Colv=F,Rowv=F,col=coul,main='with dups',na.color='lightblue')
-
-#what happens if I average things
-for(r in 1:length(SinglesAbsDiffMatrix$`89563`)){
-  CurrentRow<-SinglesAbsDiffMatrix[r,]
-  CR<-CurrentRow[!is.na(CurrentRow)]
-  print(mean(CR))
-}
-for(r in 1:length(SinglesAbsDiffMatrix$`89563`)){
-  CurrentRow<-DupsAbsDiffMatrix[r,]
-  CR<-CurrentRow[!is.na(CurrentRow)]
-  print(mean(CR))
-}
-
-#W/ buckets
-
-Tento100<-c()
-for(r in 1:8){
-  CurrentRow<-SinglesAbsDiffMatrix[r,2:4]
-  CR<-CurrentRow[!is.na(CurrentRow)]
-  Tento100<-c(Tento100,(mean(CR)))
-}
-
-Tento100D<-c()
-for(r in 1:8){
-  CurrentRow<-DupsAbsDiffMatrix[r,2:4]
-  CR<-CurrentRow[!is.na(CurrentRow)]
-  Tento100D<-c(Tento100D,(mean(CR)))
-}
-
-MilliontoTenmil<-c()
-for(r in 1:8){
-  CurrentRow<-SinglesAbsDiffMatrix[r,5:13]
-  CR<-CurrentRow[!is.na(CurrentRow)]
-  MilliontoTenmil<-c(MilliontoTenmil,(mean(CR)))
-}
-
-MilliontoTenmilD<-c()
-for(r in 1:8){
-  CurrentRow<-DupsAbsDiffMatrix[r,5:13]
-  CR<-CurrentRow[!is.na(CurrentRow)]
-  MilliontoTenmilD<-c(MilliontoTenmilD,(mean(CR)))
-}
-
-most<-c()
-for(r in 1:8){
-  CurrentRow<-SinglesAbsDiffMatrix[r,14:17]
-  CR<-CurrentRow[!is.na(CurrentRow)]
-  most<-c(most,(mean(CR)))
-}
-
-mostD<-c()
-for(r in 1:8){
-  CurrentRow<-DupsAbsDiffMatrix[r,14:17]
-  CR<-CurrentRow[!is.na(CurrentRow)]
-  mostD<-c(mostD,(mean(CR)))
-}
-
-Bucketed_SinglesAbsDiffMatrix<-cbind(Tento100,MilliontoTenmil,most)
-heatmap.2(Bucketed_SinglesAbsDiffMatrix,dendrogram='none',trace="none",Colv=F,Rowv=F,col=coul,main='with dups',na.color='lightblue')
-
-Bucketed_DupsAbsDiffMatrix<-cbind(Tento100D,MilliontoTenmilD,mostD)
-heatmap.2(Bucketed_DupsAbsDiffMatrix,dendrogram='none',trace="none",Colv=F,Rowv=F,col=coul,main='with dups',na.color='lightblue')
-fintimes<-cbind(Bucketed_SinglesAbsDiffMatrix,Bucketed_DupsAbsDiffMatrix)
-heatmap.2(fintimes,dendrogram='none',trace="none",Colv=F,Rowv=F,col=coul,main='with dups',na.color='lightblue')
-
-
-
-
-
-
-
-
-
-
-
-fakebelow10K<-abs(sing.Plor_rchrom[,1])
-fakeTento100<-rowMeans(abs(sing.Plor_rchrom[,2:4]))
-fakeMilliontoTenmil<-rowMeans(abs(sing.Plor_rchrom[,5:13]))
-fakemost<-rowMeans(abs(sing.Plor_rchrom[,14:17]))
-faketooBig<-rowMeans(abs(sing.Plor_rchrom[,18:21]))
-
-fakeBucketed_sing.Plor<-cbind(fakebelow10K,fakeTento100,fakeMilliontoTenmil,fakemost,faketooBig)
-levelplot(t(fakeBucketed_sing.Plor),
-          col.regions = colorRampPalette(c('white','grey','black'),1),
-          scale=list(x=list(rot=45)))
-
-fakeDbelow10K<-abs(dupPlor_rchrom[,1])
-fakeDTento100<-rowMeans(abs(dupPlor_rchrom[,2:4]))
-fakeDMilliontoTenmil<-rowMeans(abs(dupPlor_rchrom[,5:13]))
-fakeDmost<-rowMeans(abs(dupPlor_rchrom[,14:17]))
-fakeDtooBig<-rowMeans(abs(dupPlor_rchrom[,18:21]))
-fakeBucketed_dupPlor<-cbind(fakeDbelow10K,fakeDTento100,fakeDMilliontoTenmil,fakeDmost,fakeDtooBig)
-levelplot(t(fakeBucketed_dupPlor),
-          col.regions = colorRampPalette(c('white','grey','black'),1),
-          scale=list(x=list(rot=45)))
-
-
-Dbelow10K<-abs(dupPlor[,1])
-DTento100<-rowMeans(abs(dupPlor[,2:4]))
-DMilliontoTenmil<-rowMeans(abs(dupPlor[,5:13]))
-Dmost<-rowMeans(abs(dupPlor[,14:17]))
-DtooBig<-rowMeans(abs(dupPlor[,18:21]))
-Bucketed_dupPlor<-cbind(Dbelow10K,DTento100,DMilliontoTenmil,Dmost,DtooBig)
-levelplot(t(Bucketed_dupPlor),
-          col.regions = colorRampPalette(c('white','grey','black'),1),
-          scale=list(x=list(rot=45)))
-
-Buckets_real_chrom<-cbind(Bucketed_sing.Plor,Bucketed_dupPlor)
-
-Buckets_fake_chrom<-cbind(fakeBucketed_sing.Plor,fakeBucketed_dupPlor)
-
-levelplot(t(Buckets_real_chrom),
-          col.regions = colorRampPalette(c('white','grey','black'),1),
-          scale=list(x=list(rot=45)))
-levelplot(t(Buckets_fake_chrom),
-          col.regions = colorRampPalette(c('white','grey','black'),1),
-          scale=list(x=list(rot=45)))
-levelplot(t(cbind(Buckets_real_chrom,Buckets_fake_chrom)),
-          col.regions = colorRampPalette(c('white','grey','black'),1),
-          scale=list(x=list(rot=45)))
-
-#randomizing QTL loci
-AllTog<-allTOGETHER[c(1,3,5,7,9,11),c(1:21,43:63)]
-
-
-
-
-
-
-
-ACTUAL_CHR_RELE_QTL<-Relevant_QTL
-ACTUAL_CHR_RELE_QTL$ChrNum
-Relevant_QTL$ChrNum
-for(friendo in 1:length(Relevant_QTL$ChrNum)){
-  EveryOptionalMarker<-as.data.frame(matrix(nrow=0,ncol=3))
-  while(length(EveryOptionalMarker$id)<1){
-    ChosenChromosome<-sample(1:9,1)
-    MarkersOnChromosome <-
-      eval(as.name(paste0(
-        'MarkersOnChromosome', ChosenChromosome
-      )))
-    upperLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 4]
-    lowerLimitChosenChromosome <- chromosomeSize[ChosenChromosome, 3]
-    L_MarkerList <-
-      MarkersOnChromosome[which(
-        MarkersOnChromosome$Base < (upperLimitChosenChromosome - QTLength) &
-          MarkersOnChromosome$Base >
-          lowerLimitChosenChromosome
-      ), ]
-    R_MarkerList <-
-      MarkersOnChromosome[which(
-        MarkersOnChromosome$Base > (lowerLimitChosenChromosome + QTLength) &
-          MarkersOnChromosome$Base <
-          upperLimitChosenChromosome
-      ), ]
-    EveryOptionalMarker <- unique(rbind(L_MarkerList, R_MarkerList))
+todrop<-c()
+for (j in 2:length(interpolatedgenes$id)){
+  type1<-interpolatedgenes[j-1,4]
+  type2<-interpolatedgenes[j,4]
+  if(type1 == 'gene' & type2=='gene'){
+    todrop<-c(todrop,j)
   }
-  Relevant_QTL[friendo,1]<-ChosenChromosome
 }
 
+interpolatedgenes<-interpolatedgenes[-todrop,]
+length(todrop)
+#using 365 genes
 
-#ok let's get real
-
-howmanyMarkers<-172
-num1<-56764
-numlast<-41169562
-
-avgqtl<-as.integer(median(sort(Relevant_QTL$Length)[1:17]))
-n_bins<-ceiling(chromosomeSize[1,3]/10000)
-
-BinnedMaerker<-c()
-for (mark in 1:length(MarkersOnChromosome1$Base)){
-  BONFIRE<-max(skipforCounting[skipforCounting[,1]<MarkersOnChromosome1[mark,3],1])
-  BinnedMaerker<-c(BinnedMaerker,BONFIRE)
+head(WholeGenomeGeneDistribution)
+withEnds<-read.csv('allSiGeneswithends.csv',stringsAsFactors = F)
+GenesForTheInternet<-as.data.frame(matrix(ncol=3))
+colnames(GenesForTheInternet)<-colnames(withEnds)
+for (i in 1:9){
+  GenesOnChr<-withEnds[which(withEnds$Chromosome==i),]
+  GenesOnChr<-GenesOnChr[order(GenesOnChr$GeneStart),]
+  threesonChr<-threes[which(threes$Chromosome==i),]
+  for (gene in threesonChr$Base){
+    p<-GenesOnChr[max(which(GenesOnChr$GeneStart<as.numeric(as.character(gene)))),]
+    GenesForTheInternet<-rbind(GenesForTheInternet,p)
+  }
+  
 }
-CBM<-count(BinnedMaerker)
+
+write.csv(GenesForTheInternet,'forHBVPaper333UsedGenes.csv',row.names = F)
+head(GenesForTheInternet)
+
+listBoi<-apply(GenesForTheInternet,1,paste,":",sep='',collapse="")
+whet<-gsub('.{1}$', '', listBoi)
+write.csv(whet,file='startandEnds333geneshbv.csv',row.names = F)
+apply(df, 1, paste, collapse="")
+length(listBoi)
+lilListBoi<-c()
+for(i in 1:333){
+  
+  lilListBoi<-c(lilListBoi,substr(listBoi[i],3,nchar(listBoi[i])))
+}
+head(lilListBoi)
+tail(lilListBoi)
+threesGeneDeets<-c()
+for(g in 1:333){
+  threesGeneDeets<-c(threesGeneDeets, geneDeets[grep(lilListBoi[g],geneDeets)])
+}
+head(threesGeneDeets)
+geneNames<-c()
+for(u in 1:333){
+  entryLvl<-unlist(strsplit(threesGeneDeets[u]," "))
+  futuristic<-entryLvl[grep('gene:',entryLvl)]
+  futuristic<-substr(futuristic,6,nchar(futuristic))
+  geneNames<-c(geneNames,futuristic)
+}
+#GenesForTheInternet<-GenesForTheInternet[-1,]
+WITHNAMES<-cbind(geneNames,GenesForTheInternet)
+write.csv(WITHNAMES,'forHBVPaper333UsedGenesWITHNAMES.csv',row.names = F)
