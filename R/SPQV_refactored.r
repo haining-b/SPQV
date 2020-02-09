@@ -33,18 +33,15 @@ validateDf <- function(df, req_cols) {
 #' Create chromosome specific matrices of QTL mapping marker locations
 #'
 #'
-#' This function produces N matrices containing the locations of the
-#' markers used in a QTL mapping experiment, where N refers to the number
-#' of chromosomes in the organism of interest.
+#' This function splits marker_list into a list pf matrices for each chromosome.
 #'
-#' @param number_chromosomes Numeric value refering the the number
-#' of chromosomes in the organism of interest
+#' @param marker_list A 3-column matrix containing the marker loci used in a QTL mapping experiment
+#'   (ID, Chromosome, and Base)).
 #'
-#' @param MarkerList A 3 column matrix containing the marker loci
-#' (ID, Chromosome, and Base)).
+#' @param num_chromosomes Numeric value refering the the number of chromosomes in the organism of
+#'   interest.
 #'
-#' @return N matrices of marker loci
-#' @return Sectioned_List, a list of the names of the N matrices of marker loci
+#' @return a list of N matrices of marker loci
 #' @export
 SectionMarkers <- function(marker_list, num_chromosomes) {
   marker_list <- validateDf(marker_list, list(
@@ -78,7 +75,25 @@ SectionMarkers <- function(marker_list, num_chromosomes) {
   return(sectioned_list)
 }
 
-
+#' Create known gene lists appropriate for specific traits and your style of QTL mapping
+#'
+#' This function takes a gene list and refines it to only specific trait you would like to examine.
+#' Will remove duplicate rows. Additionally, the function will act to reduce the final list if
+#' drop_tandem is true, so as to avoid the artificial inflation of identified genes that linkage
+#' causes. This reduction is performed such that a single randomly chosen gene from any set of genes
+#' that lie between two consecutive markers remains.
+#'
+#' @param trait The trait for which you would like to produce a gene list.
+#' @param gene_list A matrix containing a list of known genes. Columns must include "ID', "Trait",
+#'   "Chromosome", and "Base".
+#' @param marker_list A matrix containing the marker loci Required columns: ID, Chromosome, and
+#'   Base.
+#' @param drop_tandem If true, remove "tandem repeats" - multiple genes with no markers between
+#'   them.
+#'
+#' @return A 4 column matrix containing "ID', "Trait", "Chromosome", and "Base" for each remaining
+#'   gene in the trait specified.
+#' @export
 FilterGeneList <-
   function(trait,
            gene_list,
@@ -150,6 +165,28 @@ FilterGeneList <-
     return(unique(trait_gene_list[grep(1, presence_absence), ]))
   }
 
+
+#' Determine the probability of placing a particular QTL on any marker in the genome
+#'
+#' This function determines the likelihood of placing a QTL on any individual marker in the genome
+#' that is reachable by that QTL. If placement_type is "extension", the likelihood reflects the
+#' probability of choosing that marker and either L->R or R->L mapping. It takes into account the
+#' sizes of your identified QTL, the lengths of each chromosome, the locations of markers, and the
+#' type of mapping that originally produced the QTL.
+#'
+#' @param qtl_list A matrix containing (at minimum) the chromosome on which the QTL was originally
+#'   found ('Chromosome'), the Leftmost Confidence interval's location, and the Rightmost Conficence
+#'   interval's location.
+#' @param placement_type Either 'extension' or 'centered'. This depends on the mapping style of the
+#'   original QTL experiment.
+#' @param sectioned_marker_list The list of the names of the N matrices of marker loci resulting
+#'   from use of the Marker_Sectioner function.
+#' @param chromosome_size A matrix containing the number of each chromosome and the first and last
+#'   markers used for the original mapping experiment.
+#'
+#' @return A list with length nrow(qtl_list), representing the probability of choosing any
+#'   particular marker reachable with that QTL
+#' @export
 QTLPlacementProbabilities <-
   function(qtl_list,
            placement_type,
@@ -247,6 +284,29 @@ QTLPlacementProbabilities <-
   }
 
 
+#' Count the number of known genes under a particular QTL
+#'
+#' This function determines the number of genes found by a QTL in the original
+#' mapping experiment. Relies on the FilterGeneList function to ensure
+#' the appropriate genes are being used.
+#'
+#' @param qtl_list A matrix containing the chromosome
+#' on which the QTL was originally found ('Chromosome'), the Leftmost
+#'  Confidence interval's location,the Rightmost Conficence interval's location,
+#'  the trait for which the QTL were discovered, and the lengths of the QTL.
+#'  Required columns: (Chromosome, LeftmostMarker, RightmostMarker, Trait, Length)
+#' @param trait The trait for which you would like to produce a gene list.
+#' @param trait_gene_list A 4 column matrix containing a list of known genes.
+#' Columns should include "GeneID', "Trait", "Chromosome", and "Locus".
+#' @param marker_list A 3 column matrix containing the marker loci
+#' (ID, Chromosome, and Base)).
+#'
+#' TODO fix doc
+#'
+#' @return A matrix containing the number of genes identified within a QTL
+#' for a specific trait, as well as the number of QTL that were identified
+#' for that trait
+#' @export
 CountGenesFound <-
   function(qtl_list,
            trait,
@@ -316,6 +376,19 @@ CountGenesFound <-
     return(trait_qtl_list)
   }
 
+
+#' TODO write docs
+#'
+#' @param gene_chr TODO
+#' @param gene_locus TODO
+#' @param qtl_ext_length TODO
+#' @param placement_type TODO
+#' @param per_marker_likelihood TODO
+#' @param sectioned_marker_list TODO
+#' @param chromosome_size TODO
+#'
+#' @return TODO
+#' @export
 GeneFoundLikelihood <- function(
   gene_chr, gene_locus,
   qtl_ext_length, placement_type,
@@ -365,7 +438,42 @@ GeneFoundLikelihood <- function(
 
 
 
-# TODO add back documentation
+#' Validate QTL using a list of previously known genes
+#'
+#' This function determines the number of genes expected to be identified by a QTL
+#' of a particular length, given the distribution of genes and mapping markers in
+#' the genome. Relies on the Gene_List_Groomer, GeneCounter, MarkerSectioner,
+#' and QTL_Placement_Probabilities functions.
+#'
+#' TODO fix doc
+#'
+#' @param qtl_list A 7 column matrix containing the chromosome
+#' on which the QTL was originally found ('Chromosome'), the Leftmost
+#'  Confidence interval's location,the Rightmost Confidence interval's location,
+#'  the trait for which the QTL were discovered, the treatment that was applied,
+#'  the mapping method, the overall type of experiment, and the lengths of the QTL.
+#' @param num_repetitions An integer defining the number of simulations to run.
+#' @param gene_list A 4 column matrix containing a list of known genes.
+#' Columns should include "GeneID', "Trait", "Chromosome", and "Locus".
+#' @param placement_type Either 'extension' or 'centered'. This depends on the
+#' mapping style of the original QTL experiment.
+#' @param trait The trait for which you would like to analyze your QTL.
+#' @param marker_list A 3 column matrix containing the marker loci
+#' (ID, Chromosome, and Base)).
+#' @param chromosome_size A matrix containing the number of each chromosome,
+#'  their total lengths, and the first and last markers used for the original
+#'  mapping experiment
+#' @param whole_genome_gene_dist A 4 column matrix of all genes in the
+#'  genome. Include Chromosome, GeneStart, GeneEnd, and GeneMiddle. The SPQValidate
+#'  function uses GeneMiddle to simulate gene placement.
+#' @param simulation_env A new environment in which a dataframe containing the
+#' results of each simulation is stored. This dataframe can be accessed as
+#' Your_Environment$Simulation_Dataframe.
+#' @param progress_bar If true, show a progress bar while running.
+#' @return A matrix containing the lengths of QTL (as an identifier), the true observed
+#' value for identified gene number, the mean value resulting from the simulations,
+#' and the upper and lower 95% confidence intervals for the simulation distributions.
+#' @export
 SPQValidate <- function(qtl_list,
                         trait,
                         num_repetitions,
