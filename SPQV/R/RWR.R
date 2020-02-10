@@ -438,8 +438,29 @@ numPercentDiffMatrix[which(numPercentDiffMatrix > max(old_breaks))] <- NA
 
 colnames(numPercentDiffMatrix)[200]<-'Mean'
 par(mar=c(10, 8, 8, 3) + 0.1)
+
+temp_colnames <- colnames(numPercentDiffMatrix)
+for (i in 1:length(temp_colnames)) {
+  if (temp_colnames[i] == "Mean") {
+    next
+  }
+  qtl_len <- as.integer(temp_colnames[i])
+  if (i %% 10 == 1) {
+    if (qtl_len > 1e6) {
+      qtl_len <- round(qtl_len, -6)
+    }
+    temp_colnames[i] <- prettyNum(
+      round(qtl_len, -3), big.mark=",", scientific=FALSE)
+
+  } else {
+    temp_colnames[i] <- ""
+  }
+  }
+
 heatmap.2(numPercentDiffMatrix,dendrogram='none',
           trace="none",Colv=F,Rowv=F,col=old_colors,srtCol = 45,
+          labCol = temp_colnames,
+          vline=100, linecol="black",
           # breaks=old_breaks,
           #cellnote = round(numHBVSinglesDifference), notecol = 'black',notecex=.7,
           main='Comparison of Bootstrapping methods to the SPQV',
