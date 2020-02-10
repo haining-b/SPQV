@@ -932,7 +932,7 @@ numPercentDiffMatrix<-sapply(PercentDiffMatrix,as.numeric)
 
 colnames(numPercentDiffMatrix)[200]<-'Mean'
 par(mar=c(10, 8, 8, 3) + 0.1)
-heatmap.2(numPercentDiffMatrix,dendrogram='none',
+old_hmap <- heatmap.2(numPercentDiffMatrix,dendrogram='none',
           trace="none",Colv=F,Rowv=F,col=hm.colors,srtCol = 45,
           #cellnote = round(numHBVSinglesDifference), notecol = 'black',notecex=.7,
           main='Comparison of Bootstrapping methods to the Haining-Blumer Validator; Percent',

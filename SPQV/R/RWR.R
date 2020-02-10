@@ -12,6 +12,7 @@
 
 library(bcaboot)
 library(gplots)
+library(ggplot2)
 
 #' TODO write docs
 #'
@@ -344,14 +345,18 @@ BSCI_trunc <- BSCI[c(2, 6, 4, 8, 10, 14, 12, 16), qtl_range_to_show]
 SPQV_trunc <- SPQV_results[qtl_range_to_show, "Upper 95% CI"]
 
 method_ratios <- BSCI_trunc
+method_round_ratios <- BSCI_trunc
 method_sub <- BSCI_trunc
-for (row_i in 1:nrow(BSCI_trunc)) {
+for (row_i in 1:nrow(method_ratios)) {
   method_ratios[row_i, ] <- BSCI_trunc[row_i, ] / SPQV_trunc
+  method_round_ratios[row_i, ] <- round(BSCI_trunc[row_i, ], 3) / round(SPQV_trunc, 3)
   method_sub[row_i, ] <- BSCI_trunc[row_i, ] - SPQV_trunc
 }
 
 showHeatmap(method_ratios, color_center=1, color_range = c(0.2, 2))
 showHeatmap(log(method_ratios), color_range = c(-2, 2))
+
+showHeatmap(round(method_round_ratios,1), color_center=1, color_range = c(0.2, 2))
 
 showHeatmap(method_sub)
 showHeatmap(log(method_sub))
@@ -377,16 +382,21 @@ showHeatmap(
   )
 
 colnames(BS_ratio)
-BS_ratio <- BSCI_trunc[, qtl_range_to_show] - BS_333[, 1:199]
+BS_ratio <- BSCI_trunc[, qtl_range_to_show] / BS_333[, 1:199]
 showHeatmap(
   as.data.frame(BS_ratio),
-  color_center = 0,
+  color_center = 1,
   color_range = c(-3, 3)
   )
 
-
-colnames(HBV_333)
-colnames(SPQV_results[1:199,])
+BSCI_old<-read.csv('example_data/RWR_results_run2.csv',stringsAsFactors = F)
+BSCI_trunc_old <- BSCI_old[c(2, 6, 4, 8, 10, 14, 12, 16), qtl_range_to_show]
+BSCI_ratio <-  BSCI_trunc / BSCI_trunc_old
+showHeatmap(
+  as.data.frame(BSCI_ratio),
+  color_center = 1,
+  color_range = c(-3, 3)
+)
 
 
 
@@ -433,6 +443,9 @@ old_colors <- c(
 old_breaks <- c(
   0.3744321, 0.5140367, 0.6536413, 0.7932458, 0.9328504, 1.0724549, 1.2120595, 1.3516641, 1.4912686,
   1.6308732, 1.7704777, 1.9100823, 2.0496869)
+old_breaks <- c(
+  0.3744321, 0.5032979, 0.6321636, 0.7610294, 0.8898951, 1.0187609, 1.1476266, 1.2764924, 1.4053581,
+  1.5342239, 1.6630896, 1.7919554, 1.9208211, 2.0496869)
 numPercentDiffMatrix[which(numPercentDiffMatrix < min(old_breaks))] <- NA
 numPercentDiffMatrix[which(numPercentDiffMatrix > max(old_breaks))] <- NA
 
@@ -457,12 +470,14 @@ for (i in 1:length(temp_colnames)) {
   }
   }
 
-heatmap.2(numPercentDiffMatrix,dendrogram='none',
+TEMP <- heatmap.2(numPercentDiffMatrix,dendrogram='none',
           trace="none",Colv=F,Rowv=F,col=old_colors,srtCol = 45,
           labCol = temp_colnames,
           vline=100, linecol="black",
-          # breaks=old_breaks,
+          colsep=length(temp_colnames)-1, sepcolor="black",#sepwidth=0.5,
+          breaks=old_breaks,
           #cellnote = round(numHBVSinglesDifference), notecol = 'black',notecex=.7,
-          main='Comparison of Bootstrapping methods to the SPQV',
+          main='Comparison of RWR methods to the SPQV',
           denscol='black',
           na.color='lightslategrey')
+ggplot2::ggsave(filename = "/Users/katyblumer/repos/SPQV/RWR_Comparison_temp.svg")
