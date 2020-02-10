@@ -1,4 +1,3 @@
-source('./SPQV_refactored.r', chdir=TRUE)
 library(testthat)
 
 # Two chromosomes, with this structure (markers are numbers, genes are letters, each is 10 bp apart):
@@ -120,15 +119,15 @@ test_that("CountGenesFound doesn't allow unfiltered gene lists", {
 
 test_that("CountGenesFound finds correct genes", {
   output <- CountGenesFound(
-    QTL_LIST, TRAIT, 
-    FilterGeneList(TRAIT, GENE_LIST, MARKER_LIST, drop_tandem = FALSE), 
+    QTL_LIST, TRAIT,
+    FilterGeneList(TRAIT, GENE_LIST, MARKER_LIST, drop_tandem = FALSE),
     MARKER_LIST
     )
   expect_equal(
     output$NumGenes, c(0, 1, 2, 4)
   )
   expect_equal(
-    output$FoundGeneIDs, c("0", "1.d", "1.b and 1.c", "1.a and 1.b and 1.c and 1.d") 
+    output$FoundGeneIDs, c("0", "1.d", "1.b and 1.c", "1.a and 1.b and 1.c and 1.d")
   )
 })
 
@@ -136,11 +135,11 @@ test_that("CountGenesFound finds correct genes", {
 # GeneFoundLikelihood ####
 test_that("GeneFoundLikelihood gets correct likelihood for 'extension'", {
   output <- GeneFoundLikelihood(
-    gene_chr = 1, 
-    gene_locus = 40, 
-    qtl_ext_length = 30, 
+    gene_chr = 1,
+    gene_locus = 40,
+    qtl_ext_length = 30,
     placement_type = "extension",
-    per_marker_likelihood = 0.1, 
+    per_marker_likelihood = 0.1,
     sectioned_marker_list = SectionMarkers(MARKER_LIST, nrow(CHROMOSOME_SIZE)),
     chromosome_size = CHROMOSOME_SIZE
   )
@@ -151,11 +150,11 @@ test_that("GeneFoundLikelihood gets correct likelihood for 'extension'", {
 
 test_that("GeneFoundLikelihood gets correct likelihood for 'centered'", {
   output <- GeneFoundLikelihood(
-    gene_chr = 1, 
-    gene_locus = 70, 
-    qtl_ext_length = 30, 
+    gene_chr = 1,
+    gene_locus = 70,
+    qtl_ext_length = 30,
     placement_type = "centered",
-    per_marker_likelihood = 0.1, 
+    per_marker_likelihood = 0.1,
     sectioned_marker_list = SectionMarkers(MARKER_LIST, nrow(CHROMOSOME_SIZE)),
     chromosome_size = CHROMOSOME_SIZE
   )
@@ -166,11 +165,11 @@ test_that("GeneFoundLikelihood gets correct likelihood for 'centered'", {
 
 test_that("GeneFoundLikelihood allows overhang in other direction for 'extension'", {
   output <- GeneFoundLikelihood(
-    gene_chr = 1, 
-    gene_locus = 20, 
-    qtl_ext_length = 30, 
+    gene_chr = 1,
+    gene_locus = 20,
+    qtl_ext_length = 30,
     placement_type = "extension",
-    per_marker_likelihood = 0.1, 
+    per_marker_likelihood = 0.1,
     sectioned_marker_list = SectionMarkers(MARKER_LIST, nrow(CHROMOSOME_SIZE)),
     chromosome_size = CHROMOSOME_SIZE
   )
@@ -181,11 +180,11 @@ test_that("GeneFoundLikelihood allows overhang in other direction for 'extension
 
 test_that("GeneFoundLikelihood doesn't allow overhang in other direction for 'centered'", {
   output <- GeneFoundLikelihood(
-    gene_chr = 1, 
-    gene_locus = 20, 
-    qtl_ext_length = 30, 
+    gene_chr = 1,
+    gene_locus = 20,
+    qtl_ext_length = 30,
     placement_type = "centered",
-    per_marker_likelihood = 0.1, 
+    per_marker_likelihood = 0.1,
     sectioned_marker_list = SectionMarkers(MARKER_LIST, nrow(CHROMOSOME_SIZE)),
     chromosome_size = CHROMOSOME_SIZE
   )
@@ -196,11 +195,11 @@ test_that("GeneFoundLikelihood doesn't allow overhang in other direction for 'ce
 
 test_that("GeneFoundLikelihood returns 0 when gene not reachable", {
   output <- GeneFoundLikelihood(
-    gene_chr = 1, 
-    gene_locus = 50, 
-    qtl_ext_length = 2, 
+    gene_chr = 1,
+    gene_locus = 50,
+    qtl_ext_length = 2,
     placement_type = "centered",
-    per_marker_likelihood = 0.1, 
+    per_marker_likelihood = 0.1,
     sectioned_marker_list = SectionMarkers(MARKER_LIST, nrow(CHROMOSOME_SIZE)),
     chromosome_size = CHROMOSOME_SIZE
   )
@@ -211,11 +210,11 @@ test_that("GeneFoundLikelihood returns 0 when gene not reachable", {
 
 test_that("GeneFoundLikelihood returns 0 when QTL can't be placed", {
   output <- GeneFoundLikelihood(
-    gene_chr = 2, 
-    gene_locus = 30, 
-    qtl_ext_length = 100, 
+    gene_chr = 2,
+    gene_locus = 30,
+    qtl_ext_length = 100,
     placement_type = "centered",
-    per_marker_likelihood = 0.1, 
+    per_marker_likelihood = 0.1,
     sectioned_marker_list = SectionMarkers(MARKER_LIST, nrow(CHROMOSOME_SIZE)),
     chromosome_size = CHROMOSOME_SIZE
   )

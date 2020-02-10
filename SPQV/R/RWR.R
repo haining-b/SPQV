@@ -348,6 +348,7 @@ showHeatmap <- function(data_df,
 # 8  ye_m | no_bb | bidi | n_dup  8
 
 RWR_results <- read.csv("example_data/RWR_results.csv")
+SPQV_results <- read.csv("example_data/SPQV_results.csv")
 qtl_range_to_show <- 1:199
 RWR_trunc <- RWR_results[c(1, 3, 2, 4, 5, 7, 6, 8), qtl_range_to_show]
 SPQV_trunc <- SPQV_results[qtl_range_to_show,]
@@ -356,7 +357,7 @@ colnames(RWR_trunc) <- SPQV_trunc$QTL
 
 method_ratios <- RWR_trunc
 for (row_i in 1:nrow(method_ratios)) {
-  method_ratios[row_i, ] <- RWR_trunc[row_i, ] / SPQV_trunc[, "Upper 95% CI"]
+  method_ratios[row_i, ] <- RWR_trunc[row_i, ] / SPQV_trunc[, "Upper.95..CI"]  # Special characters are removed when loading from CSV
 }
 
 # Plot
