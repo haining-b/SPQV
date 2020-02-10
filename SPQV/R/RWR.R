@@ -194,7 +194,7 @@ RWR <- function(
   return(qtl_cis)
 }
 
-# Run RWR ####
+# Run RWR and SPQV ####
 
 setwd("/Users/katyblumer/repos/SPQV/")
 
@@ -262,6 +262,7 @@ for (markers_only in c(FALSE, TRUE)) {
 write.csv(x = BSCI, file = "example_data/RWR_results.csv", row.names=FALSE)
 
 
+
 SPQV_results <- SPQValidate(
   qtl_list = qtl_list,
   trait = trait,
@@ -273,6 +274,8 @@ SPQV_results <- SPQValidate(
   chromosome_size = chromosome_size,
   new.env()
 )
+
+write.csv(x = SPQV_results, file = "example_data/SPQV_results.csv", row.names=FALSE)
 
 
 
@@ -342,8 +345,6 @@ SPQV_trunc <- SPQV_results[qtl_range_to_show, "Upper 95% CI"]
 
 method_ratios <- BSCI_trunc
 method_sub <- BSCI_trunc
-
-
 for (row_i in 1:nrow(BSCI_trunc)) {
   method_ratios[row_i, ] <- BSCI_trunc[row_i, ] / SPQV_trunc
   method_sub[row_i, ] <- BSCI_trunc[row_i, ] - SPQV_trunc
@@ -356,7 +357,10 @@ showHeatmap(method_sub)
 showHeatmap(log(method_sub))
 
 
-## Inspect individual dfs ####
+## Look at old data ####
+
+BS_333<-read.csv('R/333 Genes Bootstrap BCa CIs.csv',stringsAsFactors = F)
+HBV_333<-read.csv("R/HBVOutputfor333_200QTL_6_28.csv",stringsAsFactors = F)
 
 showHeatmap(BSCI_trunc, color_center = 1, color_range = c(0, 58))
 showHeatmap(BS_333, color_center = 1, color_range = c(0, 58))
@@ -386,7 +390,7 @@ colnames(SPQV_results[1:199,])
 
 
 
-# Try BBReso ####
+# Try BBReso plotting code ####
 SPQV_trunc_allcols <- SPQV_results[qtl_range_to_show, ]
 PercentDiffMatrix<-as.data.frame(matrix(nrow=8,ncol=nrow(SPQV_trunc_allcols)))
 colnames(PercentDiffMatrix)<-SPQV_trunc_allcols$QTL
@@ -423,19 +427,21 @@ for(r in 1:8){
 PercentDiffMatrix<-cbind(PercentDiffMatrix,RowMeanPerc)
 numPercentDiffMatrix<-sapply(PercentDiffMatrix,as.numeric)
 
-old_breaks <- c(
-  0.3744321, 0.5140367, 0.6536413, 0.7932458, 0.9328504, 1.0724549, 1.2120595, 1.3516641, 1.4912686,
-  1.6308732, 1.7704777, 1.9100823, 2.0496869)
 old_colors <- c(
   "#009292", "#3EACAD", "#7CC5C9", "#BADFE4", "#F8F8FF", "#F8F8FF", "#DFD5EF", "#C6B1E0", "#AD8ED0",
   "#946AC1", "#7B47B1", "#6223A2", "#490092")
+old_breaks <- c(
+  0.3744321, 0.5140367, 0.6536413, 0.7932458, 0.9328504, 1.0724549, 1.2120595, 1.3516641, 1.4912686,
+  1.6308732, 1.7704777, 1.9100823, 2.0496869)
+numPercentDiffMatrix[which(numPercentDiffMatrix < min(old_breaks))] <- NA
+numPercentDiffMatrix[which(numPercentDiffMatrix > max(old_breaks))] <- NA
 
 colnames(numPercentDiffMatrix)[200]<-'Mean'
 par(mar=c(10, 8, 8, 3) + 0.1)
 heatmap.2(numPercentDiffMatrix,dendrogram='none',
           trace="none",Colv=F,Rowv=F,col=old_colors,srtCol = 45,
-          breaks=old_breaks,
+          # breaks=old_breaks,
           #cellnote = round(numHBVSinglesDifference), notecol = 'black',notecex=.7,
-          main='Comparison of Bootstrapping methods to the Haining-Blumer Validator; Percent',
+          main='Comparison of Bootstrapping methods to the SPQV',
           denscol='black',
           na.color='lightslategrey')
