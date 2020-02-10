@@ -3,17 +3,10 @@
 library(bcaboot)
 library(gplots)
 
-#' TODO write docs
-#'
-#' @export
+
+# RWR functions ######
 
 
-
-# RWR ######
-
-#' TODO write docs
-#'
-#' @export
 sampleUniformQTLLoc <- function(skip_hangovers, bidirectional, qtl_length, chromosome_size) {
   allowed_chr <- chromosome_size[which(chromosome_size$Length >= qtl_length), ]
   sampled_chr <- allowed_chr[sample(nrow(allowed_chr), 1, prob = allowed_chr$Length), ]
@@ -39,9 +32,7 @@ sampleUniformQTLLoc <- function(skip_hangovers, bidirectional, qtl_length, chrom
   return(list(sampled_chr, qtl_range))
 }
 
-#' TODO write docs
-#'
-#' @export
+
 getAllowedMarkers <- function(
   skip_hangovers,
   qtl_length,
@@ -221,56 +212,59 @@ qtl_list$Length <-qtl_list$RightmostMarker - qtl_list$LeftmostMarker
 
 wgd$GeneMiddle <- as.integer(wgd$GeneStart + round((wgd$GeneEnd - wgd$GeneStart) /2, 0))
 
+regenerate_results <- FALSE
 
-RWR_results <- as.data.frame(matrix(nrow=16,ncol=nrow(qtl_list)))
+if (regenerate_results) {
+  RWR_results <- as.data.frame(matrix(nrow=16,ncol=nrow(qtl_list)))
 
-row_i <- 1
-for (markers_only in c(FALSE, TRUE)) {
-  for (skip_hangovers in c(FALSE, TRUE)) {
-    for (bidirectional in c(FALSE, TRUE)) {
-      drop_tandem <- TRUE
-      print(paste(
-        format(Sys.time(), "%a %b %d %X %Y"),
-        markers_only, skip_hangovers, bidirectional, drop_tandem
-      ))
-      RWR_results[row_i, ] <- RWR(
-        markers_only = markers_only,
-        skip_hangovers = skip_hangovers,
-        bidirectional = bidirectional,
-        drop_tandem = drop_tandem,
-        qtl_list = qtl_list,
-        gene_list = gene_list,
-        marker_list = marker_list,
-        chromosome_size = chromosome_size,
-        n_reps = num_reps
-      )
-      row_i <- row_i + 1
+  row_i <- 1
+  for (markers_only in c(FALSE, TRUE)) {
+    for (skip_hangovers in c(FALSE, TRUE)) {
+      for (bidirectional in c(FALSE, TRUE)) {
+        drop_tandem <- TRUE
+        print(paste(
+          format(Sys.time(), "%a %b %d %X %Y"),
+          markers_only, skip_hangovers, bidirectional, drop_tandem
+        ))
+        RWR_results[row_i, ] <- RWR(
+          markers_only = markers_only,
+          skip_hangovers = skip_hangovers,
+          bidirectional = bidirectional,
+          drop_tandem = drop_tandem,
+          qtl_list = qtl_list,
+          gene_list = gene_list,
+          marker_list = marker_list,
+          chromosome_size = chromosome_size,
+          n_reps = num_reps
+        )
+        row_i <- row_i + 1
+      }
     }
   }
+
+  write.csv(x = RWR_results, file = "example_data/RWR_results.csv", row.names=FALSE)
+
+
+
+  SPQV_results <- SPQValidate(
+    qtl_list = qtl_list,
+    trait = trait,
+    num_repetitions = num_reps,
+    placement_type = "extension",
+    gene_list = gene_list,
+    marker_list = marker_list,
+    wgd,
+    chromosome_size = chromosome_size,
+    new.env()
+  )
+
+  write.csv(x = SPQV_results, file = "example_data/SPQV_results.csv", row.names=FALSE)
+
 }
 
-write.csv(x = RWR_results, file = "example_data/RWR_results.csv", row.names=FALSE)
 
 
-
-SPQV_results <- SPQValidate(
-  qtl_list = qtl_list,
-  trait = trait,
-  num_repetitions = num_reps,
-  placement_type = "extension",
-  gene_list = gene_list,
-  marker_list = marker_list,
-  wgd,
-  chromosome_size = chromosome_size,
-  new.env()
-)
-
-write.csv(x = SPQV_results, file = "example_data/SPQV_results.csv", row.names=FALSE)
-
-
-
-
-###### Plot ? #####
+###### Plot #####
 
 showHeatmap <- function(data_df,
                         num_colors = 13, color_center = 0, color_range = NULL,
@@ -284,8 +278,11 @@ showHeatmap <- function(data_df,
     curr_row <- abs(curr_row)
     row_means <- c(row_means, mean(curr_row))
   }
-  data_df <- cbind(data_df, row_means)
-  colnames(data_df)[ncol(data_df)] <- 'Mean'
+  # Repeat mean col to make it more visible
+  data_df_w_mean <- cbind(data_df, row_means, row_means, row_means)
+  colnames(data_df_w_mean)[(ncol(data_df)+1) : ncol(data_df_w_mean)] <- ''
+  colnames(data_df_w_mean)[ncol(data_df)+2] <- 'Mean'
+  data_df_w_mean <- sapply(data_df_w_mean, as.numeric)
 
   # Handle colors
   if (is.null(color_breaks)) {
@@ -309,9 +306,9 @@ showHeatmap <- function(data_df,
   }
 
   # Handle colnames: Only show 1/10 of QTL lengths on plot, and round & pretty-print them
-  col_plot_labels <- colnames(data_df)
+  col_plot_labels <- colnames(data_df_w_mean)
   for (i in 1:length(col_plot_labels)) {
-    if (col_plot_labels[i] == "Mean") {
+    if (col_plot_labels[i] == "Mean" | col_plot_labels[i] == "") {
       next
     }
     if (i %% 10 == 1) {	 # always show first one
@@ -327,151 +324,50 @@ showHeatmap <- function(data_df,
     }
   }
 
-
   # Plot
   par(mar=c(10, 8, 8, 3) + 0.1)
   heatmap.2(
-    x = as.matrix(data_df),
+    x = as.matrix(data_df_w_mean),
     col = color_vals, breaks = color_breaks,
     srtCol = 45, labCol = col_plot_labels,
-    colsep = length(col_plot_labels) - 1, sepcolor = "black",#sepwidth=0.5,
+    colsep = length(col_plot_labels) - 3, sepcolor = "black",sepwidth=0.5,
     main = 'Comparison of RWR methods to the SPQV',
     denscol = 'black',
     na.color = 'lightslategrey',
     dendrogram='none', trace="none", Colv=F, Rowv=F)
 }
 
-#' 1  no_m | ye_bb | unid | n_dup  1
-#' 2  no_m | ye_bb | bidi | n_dup  3
-#' 3  no_m | no_bb | unid | n_dup  2
-#' 4  no_m | no_bb | bidi | n_dup  4
-#' 5  ye_m | ye_bb | unid | n_dup  5
-#' 6  ye_m | ye_bb | bidi | n_dup  7
-#' 7  ye_m | no_bb | unid | n_dup  6
-#' 8  ye_m | no_bb | bidi | n_dup  8
+# RWR results (and orig figure order):
+# 1  no_m | ye_bb | unid | n_dup  1
+# 2  no_m | ye_bb | bidi | n_dup  3
+# 3  no_m | no_bb | unid | n_dup  2
+# 4  no_m | no_bb | bidi | n_dup  4
+# 5  ye_m | ye_bb | unid | n_dup  5
+# 6  ye_m | ye_bb | bidi | n_dup  7
+# 7  ye_m | no_bb | unid | n_dup  6
+# 8  ye_m | no_bb | bidi | n_dup  8
 
 RWR_results <- read.csv("example_data/RWR_results.csv")
 qtl_range_to_show <- 1:199
 RWR_trunc <- RWR_results[c(1, 3, 2, 4, 5, 7, 6, 8), qtl_range_to_show]
-SPQV_trunc <- SPQV_results[qtl_range_to_show, "Upper 95% CI"]
+SPQV_trunc <- SPQV_results[qtl_range_to_show,]
 
+colnames(RWR_trunc) <- SPQV_trunc$QTL
 
-# ## DEBUG ##########################################
-# # Trying (and failing) to use new plotting code
-# method_ratios <- RWR_trunc
-# method_round_ratios <- RWR_trunc
-# method_sub <- RWR_trunc
-# for (row_i in 1:nrow(method_ratios)) {
-#   method_ratios[row_i, ] <- RWR_trunc[row_i, ] / SPQV_trunc
-#   method_round_ratios[row_i, ] <- round(RWR_trunc[row_i, ], 3) / round(SPQV_trunc, 3)
-#   method_sub[row_i, ] <- RWR_trunc[row_i, ] - SPQV_trunc
-# }
-#
-# showHeatmap(method_ratios, color_center=1, color_range = c(0.2, 2))
-# showHeatmap(log(method_ratios), color_range = c(-2, 2))
-#
-# showHeatmap(round(method_round_ratios,1), color_center=1, color_range = c(0.2, 2))
-#
-# showHeatmap(method_sub)
-# showHeatmap(log(method_sub))
-#
-#
-# ## Look at old data
-#
-# BS_333<-read.csv('R/333 Genes Bootstrap BCa CIs.csv',stringsAsFactors = F)
-# HBV_333<-read.csv("R/HBVOutputfor333_200QTL_6_28.csv",stringsAsFactors = F)
-#
-# showHeatmap(RWR_trunc, color_center = 1, color_range = c(0, 58))
-# showHeatmap(BS_333, color_center = 1, color_range = c(0, 58))
-#
-# showHeatmap(SPQV_results, color_center = 1, color_range = c(0, 58))
-# showHeatmap(HBV_333, color_center = 1, color_range = c(0, 58))
-#
-#
-# SPQV_ratio <- SPQV_results[qtl_range_to_show, 1:6]/HBV_333[, 1:6]
-# showHeatmap(
-#   as.data.frame(SPQV_ratio),
-#   color_center = 1,
-#   color_range = c(-0.1, 5)
-#   )
-#
-# colnames(BS_ratio)
-# BS_ratio <- RWR_trunc[, qtl_range_to_show] / BS_333[, 1:199]
-# showHeatmap(
-#   as.data.frame(BS_ratio),
-#   color_center = 1,
-#   color_range = c(-3, 3)
-#   )
-#
-# RWR_old<-read.csv('example_data/RWR_results_run2.csv',stringsAsFactors = F)
-# RWR_trunc_old <- RWR_old[c(2, 6, 4, 8, 10, 14, 12, 16), qtl_range_to_show]
-# RWR_ratio <-  RWR_trunc / RWR_trunc_old
-# showHeatmap(
-#   as.data.frame(RWR_ratio),
-#   color_center = 1,
-#   color_range = c(-3, 3)
-# )
-#
-#
-
-# Try BBReso plotting code ####
-SPQV_trunc_allcols <- SPQV_results[qtl_range_to_show, ]
-PercentDiffMatrix<-as.data.frame(matrix(nrow=8,ncol=nrow(SPQV_trunc_allcols)))
-colnames(PercentDiffMatrix)<-SPQV_trunc_allcols$QTL
-for(shannon in 1:length(SPQV_trunc_allcols$QTL)){
-  percentDiff<-RWR_trunc[,shannon]/SPQV_trunc_allcols[shannon,"Upper 95% CI"] # 6
-  PercentDiffMatrix[,shannon]<-percentDiff
+method_ratios <- RWR_trunc
+for (row_i in 1:nrow(method_ratios)) {
+  method_ratios[row_i, ] <- RWR_trunc[row_i, ] / SPQV_trunc[, "Upper 95% CI"]
 }
 
-#Getting row means
-RowMeanPerc<-c()
-for(r in 1:8){
-  CurrentRow<-PercentDiffMatrix[r,]
-  CR<-CurrentRow[!is.na(CurrentRow)]
-  CR<-abs(CR)
-  RowMeanPerc<-c(RowMeanPerc,(mean(CR)))
-}
-PercentDiffMatrix<-cbind(PercentDiffMatrix,RowMeanPerc)
-numPercentDiffMatrix<-sapply(PercentDiffMatrix,as.numeric)
-
-# Use same colors as pre-refactor plot, for comparison
+# Plot
 old_colors <- c(
   "#009292", "#3EACAD", "#7CC5C9", "#BADFE4", "#F8F8FF", "#F8F8FF", "#DFD5EF", "#C6B1E0", "#AD8ED0",
   "#946AC1", "#7B47B1", "#6223A2", "#490092")
 old_breaks <- c(
   0.3744321, 0.5032979, 0.6321636, 0.7610294, 0.8898951, 1.0187609, 1.1476266, 1.2764924, 1.4053581,
   1.5342239, 1.6630896, 1.7919554, 1.9208211, 2.0496869)
-numPercentDiffMatrix[which(numPercentDiffMatrix < min(old_breaks))] <- NA
-numPercentDiffMatrix[which(numPercentDiffMatrix > max(old_breaks))] <- NA
+final_plot <- showHeatmap(
+  method_ratios,
+  color_vals = old_colors, color_breaks = old_breaks
+)
 
-colnames(numPercentDiffMatrix)[ncol(numPercentDiffMatrix)]<-'Mean'
-par(mar=c(10, 8, 8, 3) + 0.1)
-
-# Only show 1/10 of QTL lengths on plot, and round & pretty-print them
-col_plot_labels <- colnames(numPercentDiffMatrix)
-for (i in 1:length(col_plot_labels)) {
-  if (col_plot_labels[i] == "Mean") {
-    next
-  }
-  qtl_len <- as.integer(col_plot_labels[i])
-  if (i %% 10 == 1) {
-    if (qtl_len > 1e6) {
-      qtl_len <- round(qtl_len, -6)
-    }
-    col_plot_labels[i] <- prettyNum(
-      round(qtl_len, -3), big.mark=",", scientific=FALSE)
-
-  } else {
-    col_plot_labels[i] <- ""
-  }
-}
-
-final_plot <- heatmap.2(
-  numPercentDiffMatrix,
-  col = old_colors, breaks = old_breaks,
-  srtCol = 45, labCol = col_plot_labels,
-  colsep = length(col_plot_labels) - 1, sepcolor = "black",#sepwidth=0.5,
-  main = 'Comparison of RWR methods to the SPQV',
-  denscol = 'black',
-  na.color = 'lightslategrey',
-  dendrogram='none', trace="none", Colv=F, Rowv=F)
