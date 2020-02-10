@@ -267,20 +267,21 @@ if (regenerate_results) {
 ###### Plotting functions #####
 
 showHeatmap <- function(data_df,
-                        num_colors = 13, color_center = 1, color_range = NULL,
-                        color_breaks = NULL, color_vals = NULL
+                        num_colors = 13, symm_color_range = TRUE, color_range = NULL,
+                        color_center = 1,
+                        color_breaks = NULL, color_vals = NULL,
+                        skip_label_change = FALSE
                         ) {
   # Add row means
   row_means <- c()
   for(i in 1:nrow(data_df)){
     curr_row <- data_df[i,]
     curr_row <- curr_row[!is.na(curr_row)]
-    curr_row <- abs(curr_row)
     row_means <- c(row_means, mean(curr_row))
   }
   # Repeat mean col to make it more visible
   data_df_w_mean <- cbind(data_df, row_means, row_means, row_means)
-  colnames(data_df_w_mean)[(ncol(data_df)+1) : ncol(data_df_w_mean)] <- ''
+  colnames(data_df_w_mean)[(ncol(data_df)+1) : ncol(data_df_w_mean)] <- ""
   colnames(data_df_w_mean)[ncol(data_df)+2] <- 'Mean'
   data_df_w_mean <- sapply(data_df_w_mean, as.numeric)
 
@@ -288,7 +289,13 @@ showHeatmap <- function(data_df,
   if (is.null(color_breaks)) {
     if (is.null(color_range)) {
       nums <- na.omit(as.numeric(unlist(data_df[1:nrow(data_df), ])))
-      color_range <- c(min(nums), max(nums))
+      if (symm_color_range) {
+        # doesnt make sense if color_center != 0 but symm is kinda undefined then anyway
+        range_width <- max(abs(nums - color_center))
+        color_range <- c(-range_width, range_width)
+      } else {
+        color_range <- c(min(nums), max(nums))
+      }
     }
     color_breaks <- seq(color_range[1],
                        color_range[2],
@@ -307,20 +314,22 @@ showHeatmap <- function(data_df,
 
   # Handle colnames: Only show 1/10 of QTL lengths on plot, and round & pretty-print them
   col_plot_labels <- colnames(data_df_w_mean)
-  for (i in 1:length(col_plot_labels)) {
-    if (col_plot_labels[i] == "Mean" | col_plot_labels[i] == "") {
-      next
-    }
-    if (i %% 10 == 1) {	 # always show first one
-      qtl_len <- as.integer(col_plot_labels[i])
-      qtl_len <- round(qtl_len, -3)
-      if (qtl_len > 1e6) {
-        qtl_len <- round(qtl_len, -6)
+  if (!skip_label_change) {
+    for (i in 1:length(col_plot_labels)) {
+      if (col_plot_labels[i] == "Mean" | col_plot_labels[i] == "") {
+        next
       }
-      col_plot_labels[i] <- prettyNum(qtl_len, big.mark=",", scientific=FALSE)
+      if (i %% 10 == 1) {	 # always show first one
+        qtl_len <- as.integer(col_plot_labels[i])
+        qtl_len <- round(qtl_len, -3)
+        if (qtl_len > 1e6) {
+          qtl_len <- round(qtl_len, -6)
+        }
+        col_plot_labels[i] <- prettyNum(qtl_len, big.mark=",", scientific=FALSE)
 
-    } else {
-      col_plot_labels[i] <- ""
+      } else {
+        col_plot_labels[i] <- ""
+      }
     }
   }
 
@@ -358,20 +367,72 @@ SPQV_trunc <- SPQV_results[qtl_range_to_show,]
 
 colnames(RWR_trunc) <- SPQV_trunc$QTL
 
-method_ratios <- RWR_trunc
-for (row_i in 1:nrow(method_ratios)) {
-  method_ratios[row_i, ] <- RWR_trunc[row_i, ] / SPQV_trunc[, "Upper.95..CI"]  # Special characters are removed when loading from CSV
+spqv <- SPQV_trunc[, "Upper.95..CI"] # Special characters are removed when loading from CSV
+if (min(spqv) < 0 | min(RWR_trunc) < 0) {
+  stop("RWR or SPQV upper confidence intervals contain negative values")
 }
 
-# Plot
+method_ratios <- RWR_trunc
+pct_change_RS <- RWR_trunc
+pct_change_SR <- RWR_trunc
+pct_diff_avg <- RWR_trunc
+pct_diff_max <- RWR_trunc
+pct_diff_min <- RWR_trunc
+for (row_i in 1:nrow(method_ratios)) {
+  rwr <- RWR_trunc[row_i, ]
+
+  method_ratios[row_i, ] <-
+    spqv / rwr
+
+  pct_change_SR[row_i, ] <- 100 *
+    (spqv - rwr) / rwr
+
+  pct_change_RS[row_i, ] <- 100 *
+    (spqv - rwr) / spqv
+
+  pct_diff_max[row_i, ] <- 100 *
+    (spqv - rwr) /
+    max(max(spqv), max(rwr))  # spqv is list so do max first bc i trust that more than conversion
+
+  # this is a bad idea, just doing it to see what happens
+  pct_diff_min[row_i, ] <- 100 *
+    (spqv - rwr) /
+    min(min(spqv), min(rwr))
+
+  # THIS IS THE ONE WE'RE USING
+  pct_diff_avg[row_i, ] <- 100 *
+    (spqv - rwr) /
+    ((spqv + rwr)/2)
+}
+
+# Repro plot from July
 old_colors <- c(
   "#009292", "#3EACAD", "#7CC5C9", "#BADFE4", "#F8F8FF", "#F8F8FF", "#DFD5EF", "#C6B1E0", "#AD8ED0",
   "#946AC1", "#7B47B1", "#6223A2", "#490092")
 old_breaks <- c(
   0.3744321, 0.5032979, 0.6321636, 0.7610294, 0.8898951, 1.0187609, 1.1476266, 1.2764924, 1.4053581,
   1.5342239, 1.6630896, 1.7919554, 1.9208211, 2.0496869)
-final_plot <- showHeatmap(
+showHeatmap(
   method_ratios,
   color_vals = old_colors, color_breaks = old_breaks
 )
+# July but with pct
+old_breaks_pct <- (old_breaks-1)*100
+showHeatmap(
+  pct_change_SR,
+  color_vals = old_colors, color_breaks = old_breaks_pct
+)
 
+
+# FINAL PLOT ####
+
+# Each color bin represents a distance of bin_width from 0
+bin_width <- 5
+max_val <- 50
+color_breaks <- seq(bin_width, max_val, by = bin_width)
+color_breaks <- sort(c(color_breaks, -color_breaks))
+
+final_plot <- showHeatmap(
+  pct_diff_avg,
+  color_breaks = color_breaks
+)
