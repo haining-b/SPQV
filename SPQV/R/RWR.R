@@ -194,6 +194,8 @@ RWR <- function(
   return(qtl_cis)
 }
 
+# Run RWR ####
+
 setwd("/Users/katyblumer/repos/SPQV/")
 
 num_reps <- 100
@@ -203,8 +205,8 @@ trait <- "test_trait"
 chromosome_size <- read.csv("example_data/Sviridis_ChromosomeSizes.csv", stringsAsFactors = FALSE)
 marker_list <- read.csv("example_data/Sviridis_MarkerList.csv", stringsAsFactors = FALSE)
 
-gene_list <- read.csv("example_data/forHBVPaper333UsedGenesWITHNAMES.csv", stringsAsFactors = FALSE)
-qtl_list <- read.csv("example_data/FakeQTL.csv", stringsAsFactors = FALSE)
+gene_list <- read.csv("R/FakeHBVGenes333.csv", stringsAsFactors = FALSE)
+qtl_list <- read.csv("R/FakeQTL.csv", stringsAsFactors = FALSE)
 
 wgd <- read.csv("example_data/allSiGeneswithends.csv", stringsAsFactors = FALSE)
 
@@ -213,7 +215,7 @@ chromosome_size <- dplyr::rename(chromosome_size, LeftmostMarker="First.Markers"
 
 marker_list <- dplyr::rename(marker_list, ID="id")
 
-gene_list <- dplyr::rename(gene_list, ID="Gene.Name", Base="Midpoint")
+gene_list <- dplyr::rename(gene_list, ID="GeneID")
 gene_list$Trait <- trait
 gene_list <- gene_list[, c("ID", "Trait", "Chromosome", "Base")]
 
@@ -257,7 +259,8 @@ for (markers_only in c(FALSE, TRUE)) {
   }
 }
 
-write.csv(x = BSCI, file = "example_data/RWR_results.csv")
+write.csv(x = BSCI, file = "example_data/RWR_results.csv", row.names=FALSE)
+
 
 SPQV_results <- SPQValidate(
   qtl_list = qtl_list,
@@ -271,196 +274,168 @@ SPQV_results <- SPQValidate(
   new.env()
 )
 
-# ####
-qtl_range_to_show <- 100:199
-method_ratios <- BSCI[1:8, qtl_range_to_show+1]
-SPQV_compare <- SPQV_results[qtl_range_to_show, "Upper 95% CI"]
-for (row_i in 1:nrow(method_ratios)) {
-  method_ratios[row_i, ] <- method_ratios[row_i, ] / SPQV_compare
-}
-method_ratios <- log(method_ratios)
+
 
 
 ###### Plot ? #####
+
+showHeatmap <- function(ratios, num_colors= 13, color_center=0, color_range=NULL) {
+  if (is.null(color_range)) {
+    nums <- na.omit(as.numeric(unlist(ratios)))
+    color_range <- c(min(nums), max(nums))
+  }
+
+
+  RowMeanPerc<-c()
+  for(r in 1:nrow(ratios)){
+    CurrentRow<-ratios[r,]
+    CR<-CurrentRow[!is.na(CurrentRow)]
+    CR<-abs(CR)
+    RowMeanPerc<-c(RowMeanPerc,(mean(CR)))
+  }
+  ratios<-cbind(ratios,RowMeanPerc)
+
+  color_breaks = seq(color_range[1],
+                     color_range[2],
+                     length.out=num_colors+1)
+  gradient_g = colorpanel( sum( color_breaks<=color_center), rgb(0,146,146,max=255), "ghostwhite" )
+  gradient_p = colorpanel( sum( color_breaks>color_center ), "ghostwhite", rgb(73,0,146,max=255) )
+  print(c(gradient_g,gradient_p))
+  if (length(gradient_g) <= 1) {
+    gradient_p <- gradient_p[2:length(gradient_p)]
+  }
+  heatmap_colors = unique(c(gradient_g,gradient_p))
+  print(color_breaks)
+  print(heatmap_colors)
+
+  par(mar=c(10, 8, 8, 3) + 0.1)
+  heatmap.2(x=as.matrix(ratios),dendrogram='none',
+            trace="none",Colv=F,Rowv=F,col=heatmap_colors,srtCol = 90,
+            breaks = color_breaks,
+            #cellnote = round(numHBVSinglesDifference), notecol = 'black',notecex=.7,
+            main='Comparison of Bootstrapping methods to the Haining-Blumer Validator; Percent',
+            denscol='black',
+            na.color='lightslategrey')
+}
+
+#' 1  no_m | ye_bb | unid | y_dup
+#' 2  no_m | ye_bb | unid | n_dup  1
+#' 3  no_m | ye_bb | bidi | y_dup
+#' 4  no_m | ye_bb | bidi | n_dup  3
+#' 5  no_m | no_bb | unid | y_dup
+#' 6  no_m | no_bb | unid | n_dup  2
+#' 7  no_m | no_bb | bidi | y_dup
+#' 8  no_m | no_bb | bidi | n_dup  4
+#' 9  ye_m | ye_bb | unid | y_dup
+#' 10 ye_m | ye_bb | unid | n_dup  5
+#' 11 ye_m | ye_bb | bidi | y_dup
+#' 12 ye_m | ye_bb | bidi | n_dup  7
+#' 13 ye_m | no_bb | unid | y_dup
+#' 14 ye_m | no_bb | unid | n_dup  6
+#' 15 ye_m | no_bb | bidi | y_dup
+#' 16 ye_m | no_bb | bidi | n_dup  8
+
+BSCI <- read.csv("example_data/RWR_results.csv")
+qtl_range_to_show <- 1:199
+BSCI_trunc <- BSCI[c(2, 6, 4, 8, 10, 14, 12, 16), qtl_range_to_show]
+SPQV_trunc <- SPQV_results[qtl_range_to_show, "Upper 95% CI"]
+
+method_ratios <- BSCI_trunc
+method_sub <- BSCI_trunc
+
+
+for (row_i in 1:nrow(BSCI_trunc)) {
+  method_ratios[row_i, ] <- BSCI_trunc[row_i, ] / SPQV_trunc
+  method_sub[row_i, ] <- BSCI_trunc[row_i, ] - SPQV_trunc
+}
+
+showHeatmap(method_ratios, color_center=1, color_range = c(0.2, 2))
+showHeatmap(log(method_ratios), color_range = c(-2, 2))
+
+showHeatmap(method_sub)
+showHeatmap(log(method_sub))
+
+
+## Inspect individual dfs ####
+
+showHeatmap(BSCI_trunc, color_center = 1, color_range = c(0, 58))
+showHeatmap(BS_333, color_center = 1, color_range = c(0, 58))
+
+showHeatmap(SPQV_results, color_center = 1, color_range = c(0, 58))
+showHeatmap(HBV_333, color_center = 1, color_range = c(0, 58))
+
+
+SPQV_ratio <- SPQV_results[qtl_range_to_show, 1:6]/HBV_333[, 1:6]
+showHeatmap(
+  as.data.frame(SPQV_ratio),
+  color_center = 1,
+  color_range = c(-0.1, 5)
+  )
+
+colnames(BS_ratio)
+BS_ratio <- BSCI_trunc[, qtl_range_to_show] - BS_333[, 1:199]
+showHeatmap(
+  as.data.frame(BS_ratio),
+  color_center = 0,
+  color_range = c(-3, 3)
+  )
+
+
+colnames(HBV_333)
+colnames(SPQV_results[1:199,])
+
+
+
+# Try BBReso ####
+SPQV_trunc_allcols <- SPQV_results[qtl_range_to_show, ]
+PercentDiffMatrix<-as.data.frame(matrix(nrow=8,ncol=nrow(SPQV_trunc_allcols)))
+colnames(PercentDiffMatrix)<-SPQV_trunc_allcols$QTL
+for(shannon in 1:length(SPQV_trunc_allcols$QTL)){
+  percentDiff<-BSCI_trunc[,shannon]/SPQV_trunc_allcols[shannon,"Upper 95% CI"] # 6
+  PercentDiffMatrix[,shannon]<-percentDiff
+}
+
+
+HBVSinglesDifferenceMatrix<-as.data.frame(matrix(nrow=8,ncol=ncol(BSCI_trunc)))
+# colnames(HBVSinglesDifferenceMatrix)<-Fakes$Length
+for (exp_i in 1:ncol(BSCI_trunc)){
+  DifferenceFromHBV=BSCI_trunc[,exp_i]-BSCI_trunc[exp_i,6]
+  HBVSinglesDifferenceMatrix[,exp_i]<-DifferenceFromHBV
+}
+HBVSinglesDifferenceMatrix <- HBVSinglesDifferenceMatrix[, 1:ncol(HBVSinglesDifferenceMatrix)-1]
+
+
+library(gplots)
+breaks = seq(min(na.omit(as.numeric(unlist(PercentDiffMatrix)))),
+             2.1, #max(abs(na.omit(as.numeric(unlist(PercentDiffMatrix))))),
+             length.out=13)
+gradient1 = colorpanel( sum( breaks<=1), rgb(0,146,146,max=255), "ghostwhite" )
+gradient2 = colorpanel( sum( breaks>1 ), "ghostwhite", rgb(73,0,146,max=255) )
+hm.colors = unique(c(gradient1,gradient2))
 #Getting row means
 RowMeanPerc<-c()
-for(r in 1:nrow(method_ratios)){
-  CurrentRow<-method_ratios[r,]
+for(r in 1:8){
+  CurrentRow<-PercentDiffMatrix[r,]
   CR<-CurrentRow[!is.na(CurrentRow)]
   CR<-abs(CR)
   RowMeanPerc<-c(RowMeanPerc,(mean(CR)))
 }
-method_ratios<-cbind(method_ratios,RowMeanPerc)
+PercentDiffMatrix<-cbind(PercentDiffMatrix,RowMeanPerc)
+numPercentDiffMatrix<-sapply(PercentDiffMatrix,as.numeric)
 
-nums <- na.omit(as.numeric(unlist(method_ratios)))
+old_breaks <- c(
+  0.3744321, 0.5140367, 0.6536413, 0.7932458, 0.9328504, 1.0724549, 1.2120595, 1.3516641, 1.4912686,
+  1.6308732, 1.7704777, 1.9100823, 2.0496869)
+old_colors <- c(
+  "#009292", "#3EACAD", "#7CC5C9", "#BADFE4", "#F8F8FF", "#F8F8FF", "#DFD5EF", "#C6B1E0", "#AD8ED0",
+  "#946AC1", "#7B47B1", "#6223A2", "#490092")
 
-# num_colors = 5
-# color_breaks_gr = seq(
-#   min(nums[nums <= 0]),
-#   max(nums[nums <= 0]),
-#   length.out=num_colors+1)
-# color_breaks_pu = seq(
-#   min(nums[nums > 0]),
-#   max(nums[nums > 0]),
-#   length.out=num_colors+1)
-# breaks <- c(color_breaks_gr[1:num_colors], 0, color_breaks_pu[2:num_colors+1])
-# gradient_colors = colorpanel(length(breaks)-1, low=rgb(0,146,146,max=255), mid="ghostwhite", high=rgb(73,0,146,max=255) )
-
-color_breaks = seq(-3,
-             3,
-             length.out=50)
-gradient_g = colorpanel( sum( color_breaks<=0), rgb(0,146,146,max=255), "ghostwhite" )
-gradient_p = colorpanel( sum( color_breaks>0 ), "ghostwhite", rgb(73,0,146,max=255) )
-heatmap_colors = unique(c(gradient_g,gradient_p))
-
-
+colnames(numPercentDiffMatrix)[200]<-'Mean'
 par(mar=c(10, 8, 8, 3) + 0.1)
-heatmap.2(x=TEMP_method_ratios,dendrogram='none',
-          trace="none",Colv=F,Rowv=F,col=heatmap_colors,srtCol = 45,
-          breaks = color_breaks,
+heatmap.2(numPercentDiffMatrix,dendrogram='none',
+          trace="none",Colv=F,Rowv=F,col=old_colors,srtCol = 45,
+          breaks=old_breaks,
           #cellnote = round(numHBVSinglesDifference), notecol = 'black',notecex=.7,
           main='Comparison of Bootstrapping methods to the Haining-Blumer Validator; Percent',
           denscol='black',
           na.color='lightslategrey')
-
-#
-#
-#
-#
-# # Plot rounded #####
-# RoundPercentDiffMatrix<-as.data.frame(matrix(nrow=8,ncol=length(HBV_333$QTL)))
-# colnames(RoundPercentDiffMatrix)<-HBV_333$QTL
-#
-# for(shannon in 1: length(HBV_333$QTL)){
-#   for(pants in 1:8){
-#     BS<-round(as.numeric(BS_333[pants,shannon]))
-#     HBV<-round(as.numeric(HBV_333[shannon,6]))
-#
-#     if(BS==1 &HBV==0){
-#       print("inf!")
-#       RoundPercentDiffMatrix[pants,shannon]<-NA
-#     }
-#     if(BS==0 &HBV==1){
-#       print("WTF")
-#       RoundPercentDiffMatrix[pants,shannon]<-NA
-#     }
-#     if(BS==0 & HBV==0){
-#       print("0!")
-#       RoundPercentDiffMatrix[pants,shannon]<-1
-#     }
-#     else{
-#       RoundPercentDiffMatrix[pants,shannon]<-BS/HBV
-#     }
-#   }
-#
-# }
-# RoundPercentDiffMatrix[ sapply(RoundPercentDiffMatrix,is.infinite)]<-NA
-# color_breaks = seq(min(na.omit(as.numeric(unlist(RoundPercentDiffMatrix)))),
-#              max(abs(na.omit(as.numeric(unlist(RoundPercentDiffMatrix))))),
-#              length.out=10)
-# gradient1 = colorpanel( sum( color_breaks<1), rgb(0,146,146,max=255), "ghostwhite" )
-# gradient2 = colorpanel( sum( color_breaks>1 ), "ghostwhite", rgb(73,0,146,max=255) )
-# hm.colors = c(gradient1,gradient2)
-#
-# rRowMeanPerc<-c()
-# for(r in 1:8){
-#   CurrentRow<-RoundPercentDiffMatrix[r,]
-#   CR<-CurrentRow[!is.na(CurrentRow)]
-#   CR<-abs(CR)
-#   rRowMeanPerc<-c(rRowMeanPerc,(mean(CR)))
-# }
-# RoundPercentDiffMatrix<-cbind(RoundPercentDiffMatrix,rRowMeanPerc)
-# numRoundPercentDiffMatrix<-sapply(RoundPercentDiffMatrix,as.numeric)
-#
-# heatmap.2 (numRoundPercentDiffMatrix,dendrogram='none',
-#            trace="none",Colv=F,Rowv=F,col=hm.colors,srtCol = 45,
-#            #cellnote = round(numHBVSinglesDifference), notecol = 'black',notecex=.7,
-#            main='Comparison of Bootstrapping methods to the Haining-Blumer Validator',
-#            denscol='black',
-#            na.color='lightslategrey')
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-# #w/ rounded nums ####
-#
-# color_breaks = seq(min(na.omit(as.numeric(unlist(ceiling(HBVSinglesDifferenceMatrix))))),
-#              max(abs(na.omit(as.numeric(unlist(ceiling(HBVSinglesDifferenceMatrix)))))),
-#              length.out=9)
-# gradient1 = colorpanel( sum( color_breaks[-1]<=0)+1, "deeppink4", "floralwhite" )
-# gradient2 = colorpanel( sum( color_breaks[-1]>0 )-1, "floralwhite", "aquamarine4" )
-# hm.colors = c(gradient1,gradient2)
-# formatC(numb, format = "e", digits = 2)
-# colnames(numHBVSinglesDifference)<-formatC(as.numeric(colnames(numHBVSinglesDifference)), format = "e", digits = 2)
-# colnames(numHBVSinglesDifference)[52]<-"Mean"
-# cf<-as.data.frame(numHBVSinglesDifference)
-# celifloor<-numHBVSinglesDifference
-# for(x in 1:length(cf)){
-#   for (y in 1:length(cf$Mean)){
-#     if(cf[y,x]>0){
-#       celifloor[y,x]<-ceiling(cf[y,x])
-#     }
-#     if(cf[y,x]<0){
-#       celifloor[y,x]<-floor(cf[y,x])
-#     }
-#   }
-# }
-#
-# color_breaks = seq(min(na.omit(as.numeric(unlist(celifloor)))),
-#              max(abs(na.omit(as.numeric(unlist(celifloor))))),
-#              length.out=9)
-# gradient1 = colorpanel( sum( color_breaks[-1]<=0), "deeppink4", "floralwhite" )
-# gradient2 = colorpanel( sum( color_breaks[-1]>0 ), "floralwhite", "aquamarine4" )
-# gradient2<-gradient2[2:4]
-# hm.colors = c(gradient1,gradient2)
-# heatmap.2(celifloor,dendrogram='none',#ceiling(numHBVSinglesDifference),dendrogram='none',
-#           trace="none",Colv=F,Rowv=F,col=hm.colors,srtCol = 45,
-#           #cellnote = celifloor, notecol = 'black',notecex=.7,
-#           sepwidth=c(0.01,0.01),
-#           sepcolor="white",
-#           colsep=1:ncol(numHBVSinglesDifference),
-#           rowsep=1:nrow(numHBVSinglesDifference),
-#           main='Comparison of Bootstrapping methods to the Haining-Blumer Validator',
-#           na.color='lightslategrey')
-#
-# #o....kay? absolute values? #####
-#
-# AbsDiffMatrix<-abs(numHBVSinglesDifference)
-# color_breaks = seq(min(na.omit(as.numeric(unlist(AbsDiffMatrix)))),
-#              max(abs(na.omit(as.numeric(unlist(AbsDiffMatrix))))),
-#              length.out=101)
-# gradient2 = colorpanel( sum( color_breaks[-1]>0 ), "white", "aquamarine4" )
-# abs.hm.colors = gradient2
-# heatmap.2(AbsDiffMatrix,dendrogram='none',
-#           trace="none",Colv=F,Rowv=F,col=abs.hm.colors,srtCol = 45,
-#           sepwidth=c(0.01,0.01),
-#           cellnote = round(AbsDiffMatrix,1), notecol = 'black',notecex=.7,
-#           sepcolor="white",
-#           colsep=1:ncol(numHBVSinglesDifference),
-#           rowsep=1:nrow(numHBVSinglesDifference),
-#           main='Comparison of Bootstrapping methods to the Haining-Blumer Validator',
-#           na.color='lightslategrey')
-#
-# color_breaks = seq(min(na.omit(as.numeric(unlist(round(AbsDiffMatrix))))),
-#              max(abs(na.omit(as.numeric(unlist(round(AbsDiffMatrix)))))),
-#              length.out=101)
-# gradient2 = colorpanel( sum( color_breaks[-1]>0 ), "floralwhite", "aquamarine4" )
-# abs.hm.colors = gradient2
-#
-#
-# heatmap.2(round(AbsDiffMatrix),dendrogram='none',
-#           trace="none",Colv=F,Rowv=F,col=abs.hm.colors,srtCol = 45,
-#           sepwidth=c(0.01,0.01),
-#           cellnote = round(AbsDiffMatrix), notecol = 'black',notecex=.7,
-#           sepcolor="white",
-#           colsep=1:ncol(numHBVSinglesDifference),
-#           rowsep=1:nrow(numHBVSinglesDifference),
-#           main='Comparison of Bootstrapping methods to the Haining-Blumer Validator',
-#           na.color='lightslategrey')
-# #

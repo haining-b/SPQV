@@ -4,22 +4,26 @@
 #making fake QTL for exprimentation
 
 #The scaffolds [id,Chromosome, Base]
-MarkerList<-read.csv("Sviridis_MarkerList.csv",stringsAsFactors = F)
-MarkerList$Base<-as.double(MarkerList$Base)
+MarkerList<-read.csv("example_data/Sviridis_MarkerList.csv",stringsAsFactors = F)
 #chromosome parameters [Numba, Longness, Last Markers, First Markers]
-chromosomeSize<-read.csv("Sviridis_ChromosomeSizes.csv",stringsAsFactors = F)
+chromosomeSize<-read.csv("example_data/Sviridis_ChromosomeSizes.csv",stringsAsFactors = F)
 number_chromosomes<-length(chromosomeSize$Number)
+
+# #### Regularize
+marker_list <- dplyr::rename(MarkerList, ID="id")
+marker_list$Base<-as.integer(marker_list$Base)
 
 #Splitting Markers
 
-Marker_Sectioner(number_chromosomes,MarkerList)
+
+
+sectioned_markers <- SectionMarkers(marker_list = marker_list, num_chromosomes = number_chromosomes)
 
 FakeLengths<-exp(seq(log(5000),log(55365370-90984),length.out=200))
 n_reps=1
 FakeMarkersL<-c()
 FakeMarkersR<-c()
 FakeChromosomes<-c()
-elementList<-load("element_short_names.Rdata")
 L_MarkerList<-data.frame()
 R_MarkerList<-data.frame()
 
@@ -29,13 +33,11 @@ for (QTL in 1:length(FakeLengths)){
     L_MarkerList$id<-c()
     R_MarkerList$id<-c()
     EveryOptionalMarker<-as.data.frame(matrix(nrow=0,ncol=3))
-    
+
     while(length(EveryOptionalMarker$id)<1){
       ChosenChromosome<-sample(1:9,1)
       MarkersOnChromosome <-
-        eval(as.name(paste0(
-          'MarkersOnChromosome', ChosenChromosome
-        )))
+        sectioned_markers[[ChosenChromosome]]
       upperLimitChosenChromosome <- as.numeric(as.character(chromosomeSize[ChosenChromosome, 4]))
       lowerLimitChosenChromosome <- as.numeric(as.character(chromosomeSize[ChosenChromosome, 3]))
       L_MarkerList <-
@@ -55,7 +57,7 @@ for (QTL in 1:length(FakeLengths)){
       fakeQTLspot=EveryOptionalMarker$Base
     } else{
       fakeQTLspot<-sample(EveryOptionalMarker$Base,1)}
-    
+
     L_List<-as.numeric(length(which(L_MarkerList$Base==fakeQTLspot)))
     R_List<-as.numeric(length(which(R_MarkerList$Base==fakeQTLspot)))
     if (L_List>0 & R_List>0){
@@ -63,7 +65,7 @@ for (QTL in 1:length(FakeLengths)){
       secondEndpoint<-sample(c(fakeQTLspot+QTLength,fakeQTLspot-QTLength),1)}
     if (L_List>0 & R_List==0){
       print("L")
-      secondEndpoint<-fakeQTLspot+QTLength} 
+      secondEndpoint<-fakeQTLspot+QTLength}
     if (L_List==0 & R_List>0){
       print('r')
       secondEndpoint<-fakeQTLspot-QTLength}
@@ -72,7 +74,7 @@ for (QTL in 1:length(FakeLengths)){
     FakeMarkersL<-c(FakeMarkersL, edges[1])
     FakeMarkersR<-c(FakeMarkersR, edges[2])
     FakeChromosomes<-c(FakeChromosomes, ChosenChromosome)
- 
+
   }
 
 }
@@ -91,7 +93,7 @@ for (i in FakeTreatments){
     etype='raw'
     yr='DR14'
     exptType="DR"
-  } 
+  }
   if(i=='diff'){
     etype='diff'
     yr=sample(c('DN13','DN14','DR14'),1)
@@ -108,11 +110,12 @@ Fakes<-as.data.frame(cbind(FakeChromosomes,round(FakeMarkersL),round(FakeMarkers
 colnames(Fakes)<-colnames(QTLData)
 
 
+Fakes<-read.csv("example_data/FakeQTL.csv",stringsAsFactors = F)
 
 
 #Fake Gene List
 
-WholeGenomeGeneList<-read.csv("allSiGeneswithends.csv",stringsAsFactors = F)
+WholeGenomeGeneList<-read.csv("example_data/allSiGeneswithends.csv",stringsAsFactors = F)
 head(WholeGenomeGeneList)
 WGGqL<-(WholeGenomeGeneList$GeneStart+WholeGenomeGeneList$GeneEnd)/2
 WGGL<-as.data.frame(cbind(WholeGenomeGeneList$Chromosome,WGGqL))
@@ -147,8 +150,8 @@ colnames(FakeGenes)[1]<-"GeneID"
 Fakes$trait<-'PC'
 system.time()
 #write.csv(FakeGenes,file="FakeHBVGenes333.csv",row.names = F)
-FakeGenes<-read.csv("FakeHBVGenes333.csv",stringsAsFactors = F)
-Fakes<-read.csv()
+FakeGenes<-read.csv("R/FakeHBVGenes333.csv",stringsAsFactors = F)
+# Fakes<-read.csv()
 library(plyr)
 starttime<-Sys.time()
 
@@ -175,7 +178,7 @@ for(i in 26:40){
                               chromosomeSize,MarkerList,
                               WholeGenomeGeneDistribution,GeneCount='n')
   nextone<-rbind(nextone,FakeGeneOutput2)
-  write.csv(nextone,file="HBVOutputforNowON.csv",row.names = F)
+  write.csv(nextone,file="example_data/HBVOutputforNowON.csv",row.names = F)
 
 
 }
@@ -194,7 +197,7 @@ HBVFunLoop(Fakes,"PC",1000,FakeGenes,
            chromosomeSize,MarkerList,
            WholeGenomeGeneDistribution,GeneCount='y')
 
-ionGenes<-read.csv('DirectRepeats5_28_19.csv',stringsAsFactors = F)
+ionGenes<-read.csv('example_data/DirectRepeats5_28_19.csv',stringsAsFactors = F)
 
 sadbrianna11<-HBVFunLoop(Saveme[191:200,],'PC',1000,ionGenes,
            chromosomeSize,MarkerList,
@@ -206,11 +209,11 @@ TheGaMe<-rbind(sadbrianna,sadbrianna2,sadbrianna3,
                sadbrianna7,sadbrianna8,sadbrianna9,
                sadbrianna10,sadbrianna11)
 #write.csv(TheGaMe,file='IonHBVVALUES.csv',row.names = F)
-read.csv('IonHBVVALUES.csv')
+read.csv('example_data/IonHBVVALUES.csv')
 Saveme<-GeneCounter(Fakes,ionGenes,'PC')
 
 length(Fakes$chromosome)
-write.csv(Fakes,"FakeQTL.csv",row.names = F)
+# write.csv(Fakes,"R/FakeQTL.csv",row.names = F)
 Fakes<-Fakes[201:400,]
 paper
 colnames(BootStrapConfidenceIntervals)<-paperValidator$Length
@@ -232,7 +235,7 @@ n_reps=1000
 #1. 3,1,4,2,7,5,8,6
 ############ # 1 # ###############
 #Bad Bootstrapping 1: Random Placement (no markers involved)
-##B. Bounceback, 
+##B. Bounceback,
 ###i. R-> L  mapping,cut off whatever's beyond the end of the chromosome
 ####a. No Dups
 ###(BB1Bi)
@@ -256,16 +259,16 @@ for (QTL in 1:length(paperValidator$chromosome)){
     }
     fakeQTLspot<-sample(lowerLimitChosenChromosome:upperLimitChosenChromosome,1)
     endSpot<-fakeQTLspot+QTLength
-    
+
     if(endSpot>upperLimitChosenChromosome){
       endSpot=upperLimitChosenChromosome
       fakeQTLspot=endSpot-QTLength
     }
-    
+
     disorderededges<-c(fakeQTLspot,endSpot)
     edges<-disorderededges[order(disorderededges)]
     n_start[which(n_start$Base==fakeQTLspot),4]<- n_start[which(n_start$Base==fakeQTLspot),4]+1
-    
+
     GenesWithin=0
     for(poss in 1:length(target_gene_list$GeneID)){
       if(as.numeric(as.character(target_gene_list[poss,2]))==ChosenChromosome){
@@ -275,7 +278,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
           n_hit[poss,4]<-n_hit[poss,4]+1
         }
       }
-      
+
     }
     BB1BiBootstrapper[QTL,BB1Bi]<-GenesWithin
   }
@@ -290,13 +293,13 @@ ggplot(n_hit,aes(x=Base,y=hit))+
   theme(axis.line = element_line())+
   scale_x_continuous()+
   xlab("Position")+
-  ylab("Density")+ 
+  ylab("Density")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 #####
 ############ # 2 # ###############
 #Bad Bootstrapping 1: Random Placement (no markers involved)
-##A. No bounceback, 
+##A. No bounceback,
 ###i. R-> L mapping only
 ####a. No Dups
 ###(BB1Ai)
@@ -319,11 +322,11 @@ for (QTL in 1:length(paperValidator$chromosome)){
       lowerLimitChosenChromosome <- as.numeric(as.character(chromosomeSize[ChosenChromosome, 3]))
     }
     while(endSpot>upperLimitChosenChromosome){
-      
+
       fakeQTLspot<-sample(lowerLimitChosenChromosome:upperLimitChosenChromosome,1)
       endSpot<-fakeQTLspot+QTLength
     }
-    
+
     edges<-c(fakeQTLspot,endSpot)
     n_start[which(n_start$Base==fakeQTLspot),4]<- n_start[which(n_start$Base==fakeQTLspot),4]+1
     GenesWithin=0
@@ -337,15 +340,15 @@ for (QTL in 1:length(paperValidator$chromosome)){
           n_hit[poss,4]<-n_hit[poss,4]+1
         }
       }
-      
+
     }
     BB1AiBootstrapper[QTL,BB1Ai]<-GenesWithin
   }
-  
+
   what<-as.data.frame(as.matrix(bcaboot::bcajack(unlist(BB1AiBootstrapper[QTL,]),1000,mean,verbose=F)$lims))
   BootStrapConfidenceIntervals[d,QTL]<-what[8,1]
-  
-  
+
+
 }
 ggplot(n_hit,aes(x=Base,y=hit))+
   geom_point(col=rainbowCols[2])+
@@ -354,15 +357,15 @@ ggplot(n_hit,aes(x=Base,y=hit))+
   theme(axis.line = element_line())+
   scale_x_continuous()+
   xlab("Position")+
-  ylab("Density")+ 
+  ylab("Density")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 
 #####
 ############ # 3 # ###############
 #Bad Bootstrapping 1: Random Placement (no markers involved)
-##B. Bounceback, 
-###ii. R-> L, L->R  
+##B. Bounceback,
+###ii. R-> L, L->R
 ####a. No Dups
 ###(BB1Bii)
 d=3
@@ -385,7 +388,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
     }
     fakeQTLspot<-sample(lowerLimitChosenChromosome:upperLimitChosenChromosome,1)
     endSpot<-sample(c(fakeQTLspot+QTLength,fakeQTLspot-QTLength),1)
-    
+
     if(endSpot>upperLimitChosenChromosome){
       endSpot=upperLimitChosenChromosome
       fakeQTLspot=endSpot-QTLength
@@ -394,12 +397,12 @@ for (QTL in 1:length(paperValidator$chromosome)){
       endSpot=lowerLimitChosenChromosome
       fakeQTLspot=endSpot+QTLength
     }
-    
-    
+
+
     disorderededges<-c(fakeQTLspot,endSpot)
     edges<-disorderededges[order(disorderededges)]
     n_start[which(n_start$Base==fakeQTLspot),4]<- n_start[which(n_start$Base==fakeQTLspot),4]+1
-    
+
     GenesWithin=0
     for(poss in 1:length(target_gene_list$GeneID)){
       if(target_gene_list[poss,2]==ChosenChromosome){
@@ -409,7 +412,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
           n_hit[poss,4]<-n_hit[poss,4]+1
         }
       }
-      
+
     }
     BB1BiiBootstrapper[QTL,BB1Bii]<-GenesWithin
   }
@@ -424,14 +427,14 @@ ggplot(n_hit,aes(x=Base,y=hit))+
   theme(axis.line = element_line())+
   scale_x_continuous()+
   xlab("Position")+
-  ylab("Density")+ 
+  ylab("Density")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 
 #####
 ############ # 4 # ###############
 #Bad Bootstrapping 1: Random Placement (no markers involved)
-##A. No bounceback, 
+##A. No bounceback,
 ###ii. R-> L OR L-> R mapping,cut off whatever's beyond the end of the chromosome
 ####a. No Dups
 ###(BB1Aii)
@@ -442,7 +445,7 @@ BB1AiiBootstrapper<-as.data.frame(matrix(data=0,nrow=length(paperValidator$chrom
 for (QTL in 1:length(paperValidator$chromosome)){
   QTLength<-paperValidator[QTL,4]
   obs_value= paperValidator[QTL,6]
-  
+
   for(BB1Aii in 1:n_reps ){
     ChosenChromosome<-sample(1:9,1)
     endSpot=10000000000000000
@@ -457,11 +460,11 @@ for (QTL in 1:length(paperValidator$chromosome)){
       fakeQTLspot<-sample(lowerLimitChosenChromosome:upperLimitChosenChromosome,1)
       endSpot<-sample(c(fakeQTLspot+QTLength,fakeQTLspot-QTLength),1)
     }
-    
+
     disorderededges<-c(fakeQTLspot,endSpot)
     edges<-disorderededges[order(disorderededges)]
     n_start[which(n_start$Base==fakeQTLspot),4]<- n_start[which(n_start$Base==fakeQTLspot),4]+1
-    
+
     GenesWithin=0
     for(poss in 1:length(target_gene_list$GeneID)){
       if(target_gene_list[poss,2]==ChosenChromosome){
@@ -471,7 +474,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
           n_hit[poss,4]<-n_hit[poss,4]+1
         }
       }
-      
+
     }
     BB1AiiBootstrapper[QTL,BB1Aii]<-GenesWithin
   }
@@ -485,15 +488,15 @@ ggplot(n_hit,aes(x=Base,y=hit))+
   theme(axis.line = element_line())+
   scale_x_continuous()+
   xlab("Position")+
-  ylab("Density")+ 
+  ylab("Density")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 
 #####
 ############ # 5 # ###############
-#Bad Bootstrapping 2: Marker Placement 
-##B.Bounceback, 
-###i. L->R mapping 
+#Bad Bootstrapping 2: Marker Placement
+##B.Bounceback,
+###i. L->R mapping
 ####a. No Dups
 ###(BB2Bi)
 d=5
@@ -505,10 +508,10 @@ for (QTL in 1:length(paperValidator$chromosome)){
   print(QTL)
   obs_value= paperValidator[QTL,6]
   for(BB2Bi in 1:n_reps){
-    
+
     EveryOptionalMarker<-as.data.frame(matrix(nrow=0,ncol=3))
-    
-    
+
+
     ChosenChromosome<-sample(1:9,1)
     upperLimitChosenChromosome <- as.numeric(as.character(chromosomeSize[ChosenChromosome, 4]))
     lowerLimitChosenChromosome <- as.numeric(as.character(chromosomeSize[ChosenChromosome, 3]))
@@ -517,24 +520,24 @@ for (QTL in 1:length(paperValidator$chromosome)){
       upperLimitChosenChromosome <- as.numeric(as.character(chromosomeSize[ChosenChromosome, 4]))
       lowerLimitChosenChromosome <- as.numeric(as.character(chromosomeSize[ChosenChromosome, 3]))
     }
-    
-    
+
+
     MarkersOnChromosome <-
       eval(as.name(paste0(
         'MarkersOnChromosome', ChosenChromosome
       )))
-    
+
     fakeQTLspot<-sample(MarkersOnChromosome$Base,1)
     secondEndpoint<-fakeQTLspot+QTLength
     if(secondEndpoint>=upperLimitChosenChromosome){
       fakeQTLspot<-max(MarkersOnChromosome$Base)
       secondEndpoint<-fakeQTLspot-QTLength
     }
-    
+
     disorderededges<-c(secondEndpoint,fakeQTLspot)
     edges<-disorderededges[order(disorderededges)]
     n_start[which(n_start$Base==fakeQTLspot),4]<- n_start[which(n_start$Base==fakeQTLspot),4]+1
-    
+
     GenesWithin=0
     for(poss in 1:length(target_gene_list$GeneID)){
       if(target_gene_list[poss,2]==ChosenChromosome){
@@ -542,10 +545,10 @@ for (QTL in 1:length(paperValidator$chromosome)){
         if(locus>=edges[1]& locus<=edges[2]){
           GenesWithin=GenesWithin+1
           n_hit[poss,4]<-n_hit[poss,4]+1
-          
+
         }
       }
-      
+
     }
     BB2BiBootstrapper[QTL,BB2Bi]<-GenesWithin
   }
@@ -559,7 +562,7 @@ ggplot(n_hit,aes(x=Base,y=hit))+
   theme(axis.line = element_line())+
   scale_x_continuous()+
   xlab("Position")+
-  ylab("Density")+ 
+  ylab("Density")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 ggplot(n_start,aes(x=Base,y=hit))+
   geom_point(col=rainbowCols[5])+
@@ -568,12 +571,12 @@ ggplot(n_start,aes(x=Base,y=hit))+
   theme(axis.line = element_line())+
   scale_x_continuous()+
   xlab("Position")+
-  ylab("Density")+ 
+  ylab("Density")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 #####
 ############ # 6 # ###############
-#Bad Bootstrapping 2: Marker Placement 
-##A. No bounceback, 
+#Bad Bootstrapping 2: Marker Placement
+##A. No bounceback,
 ###i. R-> L mapping only , cut off whatever's beyond the end of the chromosome
 ####a. No ds
 ###(BB2Ai)
@@ -601,17 +604,17 @@ for (QTL in 1:length(paperValidator$chromosome)){
         eval(as.name(paste0(
           'MarkersOnChromosome', ChosenChromosome
         )))
-      
+
       L_MarkerList <-
         MarkersOnChromosome[which(
           MarkersOnChromosome$Base <= as.numeric(as.character(chromosomeSize[ChosenChromosome, 4])) - QTLength+1 &
             MarkersOnChromosome$Base >= lowerLimitChosenChromosome), ]
     }
-    
+
     EveryOptionalMarker<-L_MarkerList
-    
+
     fakeQTLspot<-sample(EveryOptionalMarker$Base,1)
-    
+
     secondEndpoint<-fakeQTLspot+QTLength
     disorderededges<-c(secondEndpoint,fakeQTLspot)
     edges<-disorderededges[order(disorderededges)]
@@ -625,7 +628,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
           n_hit[poss,4]<-n_hit[poss,4]+1
         }
       }
-      
+
     }
     BB2AiBootstrapper[QTL,BB2Ai]<-GenesWithin
   }
@@ -640,7 +643,7 @@ ggplot(n_hit,aes(x=Base,y=hit))+
   theme(axis.line = element_line())+
   scale_x_continuous()+
   xlab("Position")+
-  ylab("Density")+ 
+  ylab("Density")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 ggplot(n_start,aes(x=Base,y=hit))+
   geom_point(col=rainbowCols[6])+
@@ -649,13 +652,13 @@ ggplot(n_start,aes(x=Base,y=hit))+
   theme(axis.line = element_line())+
   scale_x_continuous()+
   xlab("Position")+
-  ylab("Density")+ 
+  ylab("Density")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 #####
 ############ # 7 # ###############
-#Bad Bootstrapping 2: Marker Placement 
-##B.Bounceback, 
-###ii. bidirectional mapping 
+#Bad Bootstrapping 2: Marker Placement
+##B.Bounceback,
+###ii. bidirectional mapping
 ####a. No Dups
 ###(BB2Bii)
 d=7
@@ -667,10 +670,10 @@ for (QTL in 1:length(paperValidator$chromosome)){
   QTLength<-paperValidator[QTL,4]
   obs_value= paperValidator[QTL,6]
   for(BB2Bii in 1:n_reps){
-    
+
     EveryOptionalMarker<-as.data.frame(matrix(nrow=0,ncol=3))
-    
-    
+
+
     ChosenChromosome<-sample(1:9,1)
     upperLimitChosenChromosome <- as.numeric(as.character(chromosomeSize[ChosenChromosome, 4]))
     lowerLimitChosenChromosome <- as.numeric(as.character(chromosomeSize[ChosenChromosome, 3]))
@@ -679,13 +682,13 @@ for (QTL in 1:length(paperValidator$chromosome)){
       upperLimitChosenChromosome <- as.numeric(as.character(chromosomeSize[ChosenChromosome, 4]))
       lowerLimitChosenChromosome <- as.numeric(as.character(chromosomeSize[ChosenChromosome, 3]))
     }
-    
-    
+
+
     MarkersOnChromosome <-
       eval(as.name(paste0(
         'MarkersOnChromosome', ChosenChromosome
       )))
-    
+
     fakeQTLspot<-sample(MarkersOnChromosome$Base,1)
     secondEndpoint<-sample(c(fakeQTLspot+QTLength,fakeQTLspot-QTLength),1)
     if(secondEndpoint>upperLimitChosenChromosome){
@@ -696,11 +699,11 @@ for (QTL in 1:length(paperValidator$chromosome)){
       fakeQTLspot<-min(MarkersOnChromosome$Base)
       secondEndpoint<-fakeQTLspot+QTLength
     }
-    
+
     disorderededges<-c(secondEndpoint,fakeQTLspot)
     edges<-disorderededges[order(disorderededges)]
     n_start[which(n_start$Base==fakeQTLspot),4]<- n_start[which(n_start$Base==fakeQTLspot),4]+1
-    
+
     GenesWithin=0
     for(poss in 1:length(target_gene_list$GeneID)){
       if(target_gene_list[poss,2]==ChosenChromosome){
@@ -710,11 +713,11 @@ for (QTL in 1:length(paperValidator$chromosome)){
           n_hit[poss,4]<-n_hit[poss,4]+1
         }
       }
-      
+
     }
     BB2BiiBootstrapper[QTL,BB2Bii]<-GenesWithin
   }
-  
+
   what<-as.data.frame(as.matrix(bcaboot::bcajack(unlist(BB2BiiBootstrapper[QTL,]),1000,mean,verbose=F)$lims))
   BootStrapConfidenceIntervals[d,QTL]<-what[8,1]
 }
@@ -725,7 +728,7 @@ ggplot(n_hit,aes(x=Base,y=hit))+
   theme(axis.line = element_line())+
   scale_x_continuous()+
   xlab("Position")+
-  ylab("Density")+ 
+  ylab("Density")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 ggplot(n_start,aes(x=Base,y=hit))+
   geom_point(col=rainbowCols[7])+
@@ -734,13 +737,13 @@ ggplot(n_start,aes(x=Base,y=hit))+
   theme(axis.line = element_line())+
   scale_x_continuous()+
   xlab("Position")+
-  ylab("Density")+ 
+  ylab("Density")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 #####
 ############ # 8 # ###############
-#Bad Bootstrapping 2: Marker Placement 
-##A. No bounceback, 
-###i. R-> L, L->R mapping 
+#Bad Bootstrapping 2: Marker Placement
+##A. No bounceback,
+###i. R-> L, L->R mapping
 ####a. No Dups
 ###(BB2Aii)
 
@@ -757,7 +760,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
     L_MarkerList$id<-c()
     R_MarkerList$id<-c()
     EveryOptionalMarker<-as.data.frame(matrix(nrow=0,ncol=3))
-    
+
     while(length(EveryOptionalMarker$id)<1){
       ChosenChromosome<-sample(1:9,1)
       MarkersOnChromosome <-
@@ -784,13 +787,13 @@ for (QTL in 1:length(paperValidator$chromosome)){
       fakeQTLspot=EveryOptionalMarker$Base
     } else{
       fakeQTLspot<-sample(EveryOptionalMarker$Base,1)}
-    
+
     L_List<-as.numeric(length(which(L_MarkerList$Base==fakeQTLspot)))
     R_List<-as.numeric(length(which(R_MarkerList$Base==fakeQTLspot)))
     if (L_List>0 & R_List>0){
       secondEndpoint<-sample(c(fakeQTLspot+QTLength,fakeQTLspot-QTLength),1)}
     if (L_List>0 & R_List==0){
-      secondEndpoint<-fakeQTLspot+QTLength} 
+      secondEndpoint<-fakeQTLspot+QTLength}
     if (L_List==0 & R_List>0){
       secondEndpoint<-fakeQTLspot-QTLength}
     disorderededges<-c(secondEndpoint,fakeQTLspot)
@@ -805,7 +808,7 @@ for (QTL in 1:length(paperValidator$chromosome)){
           n_hit[poss,4]<-n_hit[poss,4]+1
         }
       }
-      
+
     }
     BB2AiiBootstrapper[QTL,BB2Aii]<-GenesWithin
   }
@@ -820,7 +823,7 @@ ggplot(n_hit,aes(x=Base,y=hit))+
   theme(axis.line = element_line())+
   scale_x_continuous()+
   xlab("Position")+
-  ylab("Density")+ 
+  ylab("Density")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 ggplot(n_start,aes(x=Base,y=hit))+
   geom_point(col=rainbowCols[8])+
@@ -829,9 +832,11 @@ ggplot(n_start,aes(x=Base,y=hit))+
   theme(axis.line = element_line())+
   scale_x_continuous()+
   xlab("Position")+
-  ylab("Density")+ 
+  ylab("Density")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 #####
+
+# Plot 1? #######
 
 #for 71 genes, 51 QTL
 #don't be an idiot don't run this code jesus
@@ -877,26 +882,40 @@ colnames(numHBVSinglesDifference)[52]<-'Mean'
 heatmap.2(numHBVSinglesDifference[,c(115:199,202)],dendrogram='none',
           trace="none",Colv=F,Rowv=F,col=hm.colors,srtCol = 45,
           #cellnote = round(numHBVSinglesDifference), notecol = 'black',notecex=.7,
-          main='Comparison of Bootstrapping methods to the Haining-Blumer Validator', 
+          main='Comparison of Bootstrapping methods to the Haining-Blumer Validator',
           denscol='black',
           na.color='lightslategrey')
-##############
-#Percent Diff
 
-BS_333<-read.csv('333 Genes Bootstrap BCa CIs.csv',stringsAsFactors = F)
-HBV_333<-read.csv("HBVOutputfor333_200QTL_6_28.csv",stringsAsFactors = F)
-PercentDiffMatrix<-as.data.frame(matrix(nrow=8,ncol=length(HBV_333$QTL)))
+#Percent Diff - best ##############
+
+BS_333<-read.csv('R/333 Genes Bootstrap BCa CIs.csv',stringsAsFactors = F)
+HBV_333<-read.csv("R/HBVOutputfor333_200QTL_6_28.csv",stringsAsFactors = F)
+
+# qtl_range_to_show <- 1:199
+# BS_333 <- BSCI[1:8, qtl_range_to_show+1]
+# HBV_333 <- SPQV_results[qtl_range_to_show, ]
+
+PercentDiffMatrix<-as.data.frame(matrix(nrow=8,ncol=nrow(HBV_333)))
 colnames(PercentDiffMatrix)<-HBV_333$QTL
 for(shannon in 1: length(HBV_333$QTL)){
-  percentDiff<-BS_333[,shannon]/HBV_333[shannon,6]
+  percentDiff<-BS_333[,shannon]/HBV_333[shannon,6] # "Upper 95% CI"
   PercentDiffMatrix[,shannon]<-percentDiff
 }
+
+
+HBVSinglesDifferenceMatrix<-as.data.frame(matrix(nrow=8,ncol=ncol(BS_333)))
+# colnames(HBVSinglesDifferenceMatrix)<-Fakes$Length
+for (exp_i in 1:ncol(BS_333)){
+  DifferenceFromHBV=BS_333[,exp_i]-HBV_333[exp_i,6]
+  HBVSinglesDifferenceMatrix[,exp_i]<-DifferenceFromHBV
+}
+HBVSinglesDifferenceMatrix <- HBVSinglesDifferenceMatrix[, 1:ncol(HBVSinglesDifferenceMatrix)-1]
 
 
 library(gplots)
 breaks = seq(min(na.omit(as.numeric(unlist(PercentDiffMatrix)))),
              max(abs(na.omit(as.numeric(unlist(PercentDiffMatrix))))),
-             length.out=13) 
+             length.out=13)
 gradient1 = colorpanel( sum( breaks<=1), rgb(0,146,146,max=255), "ghostwhite" )
 gradient2 = colorpanel( sum( breaks>1 ), "ghostwhite", rgb(73,0,146,max=255) )
 hm.colors = c(gradient1,gradient2)
@@ -916,14 +935,14 @@ par(mar=c(10, 8, 8, 3) + 0.1)
 heatmap.2(numPercentDiffMatrix,dendrogram='none',
           trace="none",Colv=F,Rowv=F,col=hm.colors,srtCol = 45,
           #cellnote = round(numHBVSinglesDifference), notecol = 'black',notecex=.7,
-          main='Comparison of Bootstrapping methods to the Haining-Blumer Validator; Percent', 
+          main='Comparison of Bootstrapping methods to the Haining-Blumer Validator; Percent',
           denscol='black',
           na.color='lightslategrey')
 
 
 
 
-
+# RoundPercentDiff?? - gives almost all 0 #############
 
 RoundPercentDiffMatrix<-as.data.frame(matrix(nrow=8,ncol=length(HBV_333$QTL)))
 colnames(RoundPercentDiffMatrix)<-HBV_333$QTL
@@ -932,7 +951,9 @@ for(shannon in 1: length(HBV_333$QTL)){
   for(pants in 1:8){
     BS<-round(as.numeric(BS_333[pants,shannon]))
     HBV<-round(as.numeric(HBV_333[shannon,6]))
-    
+
+    # if (is)
+
     if(BS==1 &HBV==0){
       print("inf!")
       RoundPercentDiffMatrix[pants,shannon]<-NA
@@ -949,7 +970,7 @@ for(shannon in 1: length(HBV_333$QTL)){
       RoundPercentDiffMatrix[pants,shannon]<-BS/HBV
     }
   }
-  
+
 }
 RoundPercentDiffMatrix[ sapply(RoundPercentDiffMatrix,is.infinite)]<-NA
 breaks = seq(min(na.omit(as.numeric(unlist(RoundPercentDiffMatrix)))),
@@ -969,10 +990,10 @@ for(r in 1:8){
 RoundPercentDiffMatrix<-cbind(RoundPercentDiffMatrix,rRowMeanPerc)
 numRoundPercentDiffMatrix<-sapply(RoundPercentDiffMatrix,as.numeric)
 
-heatmap.2 (numRoundPercentDiffMatrix,dendrogram='none',
+heatmap.2(numRoundPercentDiffMatrix,dendrogram='none',
           trace="none",Colv=F,Rowv=F,col=hm.colors,srtCol = 45,
           #cellnote = round(numHBVSinglesDifference), notecol = 'black',notecex=.7,
-          main='Comparison of Bootstrapping methods to the Haining-Blumer Validator', 
+          main='Comparison of Bootstrapping methods to the Haining-Blumer Validator',
           denscol='black',
           na.color='lightslategrey')
 
@@ -985,7 +1006,7 @@ heatmap.2 (numRoundPercentDiffMatrix,dendrogram='none',
 
 
 
-#w/ rounded nums
+#w/ rounded nums ##############
 
 breaks = seq(min(na.omit(as.numeric(unlist(ceiling(HBVSinglesDifferenceMatrix))))),
              max(abs(na.omit(as.numeric(unlist(ceiling(HBVSinglesDifferenceMatrix)))))),
@@ -993,13 +1014,14 @@ breaks = seq(min(na.omit(as.numeric(unlist(ceiling(HBVSinglesDifferenceMatrix)))
 gradient1 = colorpanel( sum( breaks[-1]<=0)+1, "deeppink4", "floralwhite" )
 gradient2 = colorpanel( sum( breaks[-1]>0 )-1, "floralwhite", "aquamarine4" )
 hm.colors = c(gradient1,gradient2)
-formatC(numb, format = "e", digits = 2)
-colnames(numHBVSinglesDifference)<-formatC(as.numeric(colnames(numHBVSinglesDifference)), format = "e", digits = 2)
-colnames(numHBVSinglesDifference)[52]<-"Mean"
+# formatC(numb, format = "e", digits = 2)
+numHBVSinglesDifference <- HBVSinglesDifferenceMatrix
+# colnames(numHBVSinglesDifference)<-formatC(as.numeric(colnames(numHBVSinglesDifference)), format = "e", digits = 2)
+# colnames(numHBVSinglesDifference)[52]<-"Mean"
 cf<-as.data.frame(numHBVSinglesDifference)
 celifloor<-numHBVSinglesDifference
-for(x in 1:length(cf)){
-  for (y in 1:length(cf$Mean)){
+for(x in 1:ncol(cf)){
+  for (y in 1:nrow(cf)){
     if(cf[y,x]>0){
       celifloor[y,x]<-ceiling(cf[y,x])
     }
@@ -1016,7 +1038,7 @@ gradient1 = colorpanel( sum( breaks[-1]<=0), "deeppink4", "floralwhite" )
 gradient2 = colorpanel( sum( breaks[-1]>0 ), "floralwhite", "aquamarine4" )
 gradient2<-gradient2[2:4]
 hm.colors = c(gradient1,gradient2)
-heatmap.2(celifloor,dendrogram='none',#ceiling(numHBVSinglesDifference),dendrogram='none',
+heatmap.2(x=as.matrix(celifloor),dendrogram='none',#ceiling(numHBVSinglesDifference),dendrogram='none',
           trace="none",Colv=F,Rowv=F,col=hm.colors,srtCol = 45,
           #cellnote = celifloor, notecol = 'black',notecex=.7,
           sepwidth=c(0.01,0.01),
@@ -1026,7 +1048,7 @@ heatmap.2(celifloor,dendrogram='none',#ceiling(numHBVSinglesDifference),dendrogr
           main='Comparison of Bootstrapping methods to the Haining-Blumer Validator',
           na.color='lightslategrey')
 
-#o....kay? absolute values?
+#o....kay? absolute values? ##############
 
 AbsDiffMatrix<-abs(numHBVSinglesDifference)
 breaks = seq(min(na.omit(as.numeric(unlist(AbsDiffMatrix)))),
@@ -1034,24 +1056,24 @@ breaks = seq(min(na.omit(as.numeric(unlist(AbsDiffMatrix)))),
              length.out=101)
 gradient2 = colorpanel( sum( breaks[-1]>0 ), "white", "aquamarine4" )
 abs.hm.colors = gradient2
-heatmap.2(AbsDiffMatrix,dendrogram='none',
+heatmap.2(as.matrix(AbsDiffMatrix),dendrogram='none',
           trace="none",Colv=F,Rowv=F,col=abs.hm.colors,srtCol = 45,
           sepwidth=c(0.01,0.01),
-          cellnote = round(AbsDiffMatrix,1), notecol = 'black',notecex=.7,
-          sepcolor="white",
+          # cellnote = round(AbsDiffMatrix,1), notecol = 'black',notecex=.7,
+          # sepcolor="white",
           colsep=1:ncol(numHBVSinglesDifference),
           rowsep=1:nrow(numHBVSinglesDifference),
           main='Comparison of Bootstrapping methods to the Haining-Blumer Validator',
           na.color='lightslategrey')
 
+##?? abs val? ############
 breaks = seq(min(na.omit(as.numeric(unlist(round(AbsDiffMatrix))))),
              max(abs(na.omit(as.numeric(unlist(round(AbsDiffMatrix)))))),
              length.out=101)
 gradient2 = colorpanel( sum( breaks[-1]>0 ), "floralwhite", "aquamarine4" )
 abs.hm.colors = gradient2
 
-
-heatmap.2(round(AbsDiffMatrix),dendrogram='none',
+heatmap.2(as.matrix(round(AbsDiffMatrix)),dendrogram='none',
           trace="none",Colv=F,Rowv=F,col=abs.hm.colors,srtCol = 45,
           sepwidth=c(0.01,0.01),
           cellnote = round(AbsDiffMatrix), notecol = 'black',notecex=.7,
@@ -1060,12 +1082,14 @@ heatmap.2(round(AbsDiffMatrix),dendrogram='none',
           rowsep=1:nrow(numHBVSinglesDifference),
           main='Comparison of Bootstrapping methods to the Haining-Blumer Validator',
           na.color='lightslategrey')
-#
 
 
 
 
 
+
+
+#Getting rid of dups?? ###########
 
 faketargets<-WholeGenomeGeneDistribution[sample(1:length(WholeGenomeGeneDistribution$GeneStart),500),]
 
@@ -1098,7 +1122,7 @@ length(todrop)
 #using 365 genes
 
 head(WholeGenomeGeneDistribution)
-withEnds<-read.csv('allSiGeneswithends.csv',stringsAsFactors = F)
+withEnds<-read.csv('example_data/allSiGeneswithends.csv',stringsAsFactors = F)
 GenesForTheInternet<-as.data.frame(matrix(ncol=3))
 colnames(GenesForTheInternet)<-colnames(withEnds)
 for (i in 1:9){
@@ -1109,7 +1133,7 @@ for (i in 1:9){
     p<-GenesOnChr[max(which(GenesOnChr$GeneStart<as.numeric(as.character(gene)))),]
     GenesForTheInternet<-rbind(GenesForTheInternet,p)
   }
-  
+
 }
 
 write.csv(GenesForTheInternet,'forHBVPaper333UsedGenes.csv',row.names = F)
