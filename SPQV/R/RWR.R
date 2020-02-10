@@ -10,7 +10,8 @@
 #
 # target_gene_list_DUPS<-unique(read.csv("IonomicGeneList.csv",stringsAsFactors = F)[,c(1,3,4)])
 
-library(bootstrap)
+library(bcaboot)
+library(gplots)
 
 #' TODO write docs
 #'
@@ -134,13 +135,7 @@ RWR <- function(
 
   for (qtl_i in 1:nrow(qtl_list)) {
     qtl_length <- qtl_list[qtl_i, "Length"]
-    obs_genes_found <- qtl_list[qtl_i, "NumGenes"]  # TODO have to calc this?
-
-    if(obs_genes_found == 0) {
-      # TODO is this ok?????
-      qtl_cis[qtl_i] <- 0
-      next
-    }
+    obs_genes_found <- qtl_list[qtl_i, "NumGenes"]
 
     if (markers_only) {
       allowed_markers <- getAllowedMarkers(skip_hangovers, qtl_length, marker_list)
@@ -188,49 +183,14 @@ RWR <- function(
 
     }  # endfor n_reps
 
-    if(sum(exp_genes_found) == 0) {
-      # TODO is this ok?????
-      qtl_cis[qtl_i] <- 0
-      next
-    }
+    BCA_CIs <- as.data.frame(as.matrix(
+      bcaboot::bcajack(exp_genes_found, n_reps, mean, verbose=F)$lims
+    ))
 
-    # no touchy the math
-    BS_dist <- exp_genes_found
-    GHat <- ecdf(BS_dist)
-    z0 <- qnorm(GHat(obs_genes_found))
+    qtl_cis[qtl_i] <- BCA_CIs["0.95", "bca"]
 
-    ds<-c()
-    complex_Fun<-function(x){
-      for(i in length(x)){
-        present<-x[i]
-        ales<-x[-i]
-        alesDot<-sum(ales)/(length(x)-1)
-
-        dSubI<-present-alesDot
-        ds<-c(ds,dSubI)
-
-      }
-      return(ds)
-    }
-
-    dSubI <- bootstrap::jackknife(as.vector(BS_dist),complex_Fun)
-    accelConstant <- (1/6) * sum(dSubI$jack.values ^ 3) / ((sum(dSubI$jack.values ^ 2)) ^ (2/3))
-
-    bcaNum <- z0 + 1.96
-    bcaDen <- 1 - accelConstant*(z0+1.96)
-    if (z0 == Inf) {
-      toQuantile <- NA
-    } else {
-      allIn <- z0 + bcaNum / bcaDen
-      toQuantile <- pnorm(allIn)
-    }
-
-    qtl_cis[qtl_i] <- quantile(BS_dist, toQuantile)
-    if (is.na(quantile(BS_dist, toQuantile))) {
-      print("DO NOT SUBMIT")
-      print("something else")
-    }
   } # endfor qtl_list
+
   return(qtl_cis)
 }
 
@@ -238,11 +198,15 @@ setwd("/Users/katyblumer/repos/SPQV/")
 
 num_reps <- 100
 
+trait <- "test_trait"
+
 chromosome_size <- read.csv("example_data/Sviridis_ChromosomeSizes.csv", stringsAsFactors = FALSE)
 marker_list <- read.csv("example_data/Sviridis_MarkerList.csv", stringsAsFactors = FALSE)
 
 gene_list <- read.csv("example_data/forHBVPaper333UsedGenesWITHNAMES.csv", stringsAsFactors = FALSE)
 qtl_list <- read.csv("example_data/FakeQTL.csv", stringsAsFactors = FALSE)
+
+wgd <- read.csv("example_data/allSiGeneswithends.csv", stringsAsFactors = FALSE)
 
 # Regularize
 chromosome_size <- dplyr::rename(chromosome_size, LeftmostMarker="First.Markers", RightmostMarker="Last.Markers", Chromosome="Number")
@@ -250,7 +214,7 @@ chromosome_size <- dplyr::rename(chromosome_size, LeftmostMarker="First.Markers"
 marker_list <- dplyr::rename(marker_list, ID="id")
 
 gene_list <- dplyr::rename(gene_list, ID="Gene.Name", Base="Midpoint")
-gene_list$Trait <- "test_trait"
+gene_list$Trait <- trait
 gene_list <- gene_list[, c("ID", "Trait", "Chromosome", "Base")]
 
 qtl_list <- dplyr::rename(qtl_list,
@@ -258,10 +222,12 @@ qtl_list <- dplyr::rename(qtl_list,
               Trait="trait", Treatment="treatment", Method="type",
               ExptType="expt_type")
 qtl_list$Length <-as.integer(0)
-qtl_list$Trait <- "test_trait"
+qtl_list$Trait <- trait
 qtl_list <- qtl_list[, c("Chromosome", "LeftmostMarker", "RightmostMarker", "Trait", "Treatment",
                "Method", "ExptType", "Length" )]
 qtl_list$Length <-qtl_list$RightmostMarker - qtl_list$LeftmostMarker
+
+wgd$GeneMiddle <- as.integer(wgd$GeneStart + round((wgd$GeneEnd - wgd$GeneStart) /2, 0))
 
 
 BSCI <- as.data.frame(matrix(nrow=16,ncol=nrow(qtl_list)))
@@ -273,15 +239,15 @@ for (markers_only in c(FALSE, TRUE)) {
       for (drop_tandem in c(FALSE, TRUE)) {
         print(paste(markers_only, skip_hangovers, bidirectional, drop_tandem))
         BSCI[row_i, ] <- RWR(
-          markers_only,
-          skip_hangovers,
-          bidirectional,
-          drop_tandem,
-          qtl_list,
-          gene_list,
-          marker_list,
-          chromosome_size,
-          num_reps
+          markers_only = markers_only,
+          skip_hangovers = skip_hangovers,
+          bidirectional = bidirectional,
+          drop_tandem = drop_tandem,
+          qtl_list = qtl_list,
+          gene_list = gene_list,
+          marker_list = marker_list,
+          chromosome_size = chromosome_size,
+          n_reps = num_reps
         )
         print(row_i)
         row_i <- row_i + 1
@@ -291,46 +257,72 @@ for (markers_only in c(FALSE, TRUE)) {
   }
 }
 
+write.csv(x = BSCI, file = "example_data/RWR_results.csv")
 
-# # Plotting #####
-# BS_333<-read.csv('333 Genes Bootstrap BCa CIs.csv',stringsAsFactors = F)
-# HBV_333<-read.csv("HBVOutputfor333_200QTL_6_28.csv",stringsAsFactors = F)
-# PercentDiffMatrix<-as.data.frame(matrix(nrow=8,ncol=length(HBV_333$QTL)))
-# colnames(PercentDiffMatrix)<-HBV_333$QTL
-# for(shannon in 1: length(HBV_333$QTL)){
-#   percentDiff<-BS_333[,shannon]/HBV_333[shannon,6]
-#   PercentDiffMatrix[,shannon]<-percentDiff
-# }
-#
-#
-#
-# ###### Plot ? #####
-# library(gplots)
-# color_breaks = seq(min(na.omit(as.numeric(unlist(PercentDiffMatrix)))),
-#              max(abs(na.omit(as.numeric(unlist(PercentDiffMatrix))))),
-#              length.out=13)
-# gradient1 = colorpanel( sum( color_breaks<=1), rgb(0,146,146,max=255), "ghostwhite" )
-# gradient2 = colorpanel( sum( color_breaks>1 ), "ghostwhite", rgb(73,0,146,max=255) )
-# hm.colors = c(gradient1,gradient2)
-# #Getting row means
-# RowMeanPerc<-c()
-# for(r in 1:8){
-#   CurrentRow<-PercentDiffMatrix[r,]
-#   CR<-CurrentRow[!is.na(CurrentRow)]
-#   CR<-abs(CR)
-#   RowMeanPerc<-c(RowMeanPerc,(mean(CR)))
-# }
-# PercentDiffMatrix<-cbind(PercentDiffMatrix,RowMeanPerc)
-#
-# colnames(numPercentDiffMatrix)[200]<-'Mean'
-# par(mar=c(10, 8, 8, 3) + 0.1)
-# heatmap.2(numPercentDiffMatrix,dendrogram='none',
-#           trace="none",Colv=F,Rowv=F,col=hm.colors,srtCol = 45,
-#           #cellnote = round(numHBVSinglesDifference), notecol = 'black',notecex=.7,
-#           main='Comparison of Bootstrapping methods to the Haining-Blumer Validator; Percent',
-#           denscol='black',
-#           na.color='lightslategrey')
-#
+SPQV_results <- SPQValidate(
+  qtl_list = qtl_list,
+  trait = trait,
+  num_repetitions = 10, # DO NOT SUBMIT
+  placement_type = "extension",
+  gene_list = gene_list,
+  marker_list = marker_list,
+  wgd,
+  chromosome_size = chromosome_size,
+  new.env()
+)
+
+# ####
+qtl_range_to_show <- 100:199
+method_ratios <- BSCI[1:8, qtl_range_to_show+1]
+SPQV_compare <- SPQV_results[qtl_range_to_show, "Upper 95% CI"]
+for (row_i in 1:nrow(method_ratios)) {
+  method_ratios[row_i, ] <- method_ratios[row_i, ] / SPQV_compare
+}
+method_ratios <- log(method_ratios)
+
+
+###### Plot ? #####
+#Getting row means
+RowMeanPerc<-c()
+for(r in 1:nrow(method_ratios)){
+  CurrentRow<-method_ratios[r,]
+  CR<-CurrentRow[!is.na(CurrentRow)]
+  CR<-abs(CR)
+  RowMeanPerc<-c(RowMeanPerc,(mean(CR)))
+}
+method_ratios<-cbind(method_ratios,RowMeanPerc)
+
+nums <- na.omit(as.numeric(unlist(method_ratios)))
+
+# num_colors = 5
+# color_breaks_gr = seq(
+#   min(nums[nums <= 0]),
+#   max(nums[nums <= 0]),
+#   length.out=num_colors+1)
+# color_breaks_pu = seq(
+#   min(nums[nums > 0]),
+#   max(nums[nums > 0]),
+#   length.out=num_colors+1)
+# breaks <- c(color_breaks_gr[1:num_colors], 0, color_breaks_pu[2:num_colors+1])
+# gradient_colors = colorpanel(length(breaks)-1, low=rgb(0,146,146,max=255), mid="ghostwhite", high=rgb(73,0,146,max=255) )
+
+color_breaks = seq(-3,
+             3,
+             length.out=50)
+gradient_g = colorpanel( sum( color_breaks<=0), rgb(0,146,146,max=255), "ghostwhite" )
+gradient_p = colorpanel( sum( color_breaks>0 ), "ghostwhite", rgb(73,0,146,max=255) )
+heatmap_colors = unique(c(gradient_g,gradient_p))
+
+
+par(mar=c(10, 8, 8, 3) + 0.1)
+heatmap.2(x=TEMP_method_ratios,dendrogram='none',
+          trace="none",Colv=F,Rowv=F,col=heatmap_colors,srtCol = 45,
+          breaks = color_breaks,
+          #cellnote = round(numHBVSinglesDifference), notecol = 'black',notecex=.7,
+          main='Comparison of Bootstrapping methods to the Haining-Blumer Validator; Percent',
+          denscol='black',
+          na.color='lightslategrey')
+
 #
 #
 #
