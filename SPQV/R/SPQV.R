@@ -218,6 +218,7 @@ QTLPlacementProbabilities <-
         )
       )
     }
+    # TODO add QTL length
 
     # Sort chromosomes
     chromosome_size <- chromosome_size[order(as.numeric(chromosome_size$Chromosome)), ]
@@ -642,10 +643,10 @@ SPQValidate <- function(qtl_list,
       output[qtl_i, rep_i] <- sim_egn
 
       if (progress_bar) {
-        utils::setTxtProgressBar(pb, qtl_i + ((rep_i-1)*num_qtl) / (num_qtl * num_repetitions))
+        utils::setTxtProgressBar(pb, (qtl_i + ((rep_i-1)*num_qtl)) / (num_qtl * num_repetitions))
       }
-    }
-  }
+    } # endfor num_qtl
+  } # endfor num_repetitions
 
   colnames(output) <- paste0("Simulation_Round_", 1:num_repetitions)
 
