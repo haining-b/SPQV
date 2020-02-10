@@ -264,10 +264,10 @@ if (regenerate_results) {
 
 
 
-###### Plot #####
+###### Plotting functions #####
 
 showHeatmap <- function(data_df,
-                        num_colors = 13, color_center = 0, color_range = NULL,
+                        num_colors = 13, color_center = 1, color_range = NULL,
                         color_breaks = NULL, color_vals = NULL
                         ) {
   # Add row means
@@ -287,7 +287,7 @@ showHeatmap <- function(data_df,
   # Handle colors
   if (is.null(color_breaks)) {
     if (is.null(color_range)) {
-      nums <- na.omit(as.numeric(unlist(data_df[1:nrow(data_df)-1,])))
+      nums <- na.omit(as.numeric(unlist(data_df[1:nrow(data_df), ])))
       color_range <- c(min(nums), max(nums))
     }
     color_breaks <- seq(color_range[1],
@@ -329,13 +329,16 @@ showHeatmap <- function(data_df,
   heatmap.2(
     x = as.matrix(data_df_w_mean),
     col = color_vals, breaks = color_breaks,
-    srtCol = 45, labCol = col_plot_labels,
+    srtCol = 45, labCol = col_plot_labels, cexCol = 0.9,
     colsep = length(col_plot_labels) - 3, sepcolor = "black",sepwidth=0.5,
     main = 'Comparison of RWR methods to the SPQV',
     denscol = 'black',
     na.color = 'lightslategrey',
     dendrogram='none', trace="none", Colv=F, Rowv=F)
 }
+
+
+###### Make plot #####
 
 # RWR results (and orig figure order):
 # 1  no_m | ye_bb | unid | n_dup  1
