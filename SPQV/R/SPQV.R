@@ -682,8 +682,8 @@ SPQValidate <- function(qtl_list,
     mu <- rowMeans(output)[qtl_i]
 
     center <- c(center, mu)
-    upper <- c(upper, mu + z_value * std_devs[qtl_i])
-    lower <- c(lower, mu - z_value * std_devs[qtl_i])
+    upper <- c(upper, mu + z_value * (std_devs[qtl_i]/sqrt(num_repetitions)))
+    lower <- c(lower, mu - z_value * (std_devs[qtl_i]/sqrt(num_repetitions)))
   }
 
   #dealing with multiple testing
@@ -696,10 +696,15 @@ SPQValidate <- function(qtl_list,
     CIstoSum_indices<-which(qtl_gene_counts$QTLGroup==grouping_i)
 
     dist_ctr <- center[CIstoSum_indices]
-    dist_vars<-var(unlist(output[CIstoSum_indices,]))
+    distvars<-c()
+    for(dist_i in 1: length(CIstoSum_indices)){
+      dist_var<-var(unlist(output[CIstoSum_indices[dist_i],]))
+      distvars<-c(distvars,dist_var)
+    }
+    #dist_vars<-var(unlist(output[CIstoSum_indices,]))
     #dist_radius <- upper[CIstoSum_indices] - dist_ctr
     #sqr_rad <- dist_radius^2
-    sqr_vars<-dist_vars^2
+    sqr_vars<-distvars^2
 
     adjusted_center<-sum(dist_ctr)
     #adjusted_radius<-sqrt(sum(sqr_rad))
