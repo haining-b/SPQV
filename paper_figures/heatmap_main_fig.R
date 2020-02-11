@@ -2,6 +2,7 @@
 
 setwd("/Users/katyblumer/repos/SPQV/")
 
+# Inputs ####
 num_reps <- 10
 
 trait <- "test_trait"
@@ -37,6 +38,8 @@ wgd$GeneMiddle <- as.integer(wgd$GeneStart + round((wgd$GeneEnd - wgd$GeneStart)
 
 regenerate_results <- TRUE
 
+
+# Run RWR and SPQV ####
 if (regenerate_results) {
   RWR_results <- as.data.frame(matrix(nrow=16,ncol=nrow(qtl_list)))
 
@@ -65,7 +68,7 @@ if (regenerate_results) {
     }
   }
 
-  write.csv(x = RWR_results, file = "example_data/RWR_results.csv", row.names=FALSE)
+  write.csv(x = RWR_results, file = "paper_figures/data/RWR_results.csv", row.names=FALSE)
 
 
 
@@ -81,7 +84,7 @@ if (regenerate_results) {
     new.env()
   )
 
-  write.csv(x = SPQV_results, file = "example_data/SPQV_results.csv", row.names=FALSE)
+  write.csv(x = SPQV_results, file = "paper_figures/data/SPQV_results.csv", row.names=FALSE)
 
 }
 
@@ -98,8 +101,8 @@ if (regenerate_results) {
 # 7  ye_m | no_bb | unid | n_dup  6
 # 8  ye_m | no_bb | bidi | n_dup  8
 
-RWR_results <- read.csv("example_data/RWR_results.csv", stringsAsFactors = FALSE)
-SPQV_results <- read.csv("example_data/SPQV_results.csv", stringsAsFactors = FALSE)
+RWR_results <- read.csv("paper_figures/data/RWR_results.csv", stringsAsFactors = FALSE)
+SPQV_results <- read.csv("paper_figures/data/SPQV_results.csv", stringsAsFactors = FALSE)
 qtl_range_to_show <- 1:199
 RWR_trunc <- RWR_results[c(1, 3, 2, 4, 5, 7, 6, 8), qtl_range_to_show]
 SPQV_trunc <- SPQV_results[qtl_range_to_show,]
@@ -117,6 +120,7 @@ pct_change_SR <- RWR_trunc
 pct_diff_avg <- RWR_trunc
 pct_diff_max <- RWR_trunc
 pct_diff_min <- RWR_trunc
+ceiling_diff <- RWR_trunc
 for (row_i in 1:nrow(method_ratios)) {
   rwr <- RWR_trunc[row_i, ]
 
@@ -142,6 +146,10 @@ for (row_i in 1:nrow(method_ratios)) {
   pct_diff_avg[row_i, ] <- 100 *
     (spqv - rwr) /
     ((spqv + rwr)/2)
+
+  # THIS IS THE ONE WE'RE USING
+  ceiling_diff[row_i, ] <-
+    (ceiling(spqv) - ceiling(unlist(rwr)))
 }
 
 # Repro plot from July
@@ -160,6 +168,17 @@ old_breaks_pct <- (old_breaks-1)*100
 showHeatmap(
   pct_change_SR,
   color_vals = old_colors, color_breaks = old_breaks_pct
+)
+
+
+# Ceiling plot ####
+bin_width <- 1
+max_val <- 10
+color_breaks <- seq(bin_width, max_val, by = bin_width)
+color_breaks <- sort(c(color_breaks, -color_breaks, -0.01, 0.01))
+showHeatmap(
+  ceiling_diff,
+  color_breaks = color_breaks
 )
 
 

@@ -179,7 +179,7 @@ RWR <- function(
 
 showHeatmap <- function(data_df,
                         num_colors = 13, symm_color_range = TRUE, color_range = NULL,
-                        color_center = 1,
+                        color_center = 0,
                         color_breaks = NULL, color_vals = NULL,
                         skip_label_change = FALSE
                         ) {

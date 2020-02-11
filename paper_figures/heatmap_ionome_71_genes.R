@@ -68,7 +68,7 @@ if (regenerate_results) {
     }
   }
 
-  write.csv(x = RWR_results, file = "example_data/RWR_results_ionomic.csv", row.names=FALSE)
+  write.csv(x = RWR_results, file = "paper_figures/data/RWR_results_ionomic.csv", row.names=FALSE)
 
 
 
@@ -84,7 +84,7 @@ if (regenerate_results) {
     new.env()
   )
 
-  write.csv(x = SPQV_results, file = "example_data/SPQV_results_ionomic.csv", row.names=FALSE)
+  write.csv(x = SPQV_results, file = "paper_figures/data/SPQV_results_ionomic.csv", row.names=FALSE)
 
 }
 
@@ -100,8 +100,8 @@ if (regenerate_results) {
 # 7  ye_m | no_bb | unid | n_dup  6
 # 8  ye_m | no_bb | bidi | n_dup  8
 
-RWR_results <- read.csv("example_data/RWR_results_ionomic.csv", stringsAsFactors = FALSE)
-SPQV_results <- read.csv("example_data/SPQV_results_ionomic.csv", stringsAsFactors = FALSE)
+RWR_results <- read.csv("paper_figures/data/RWR_results_ionomic.csv", stringsAsFactors = FALSE)
+SPQV_results <- read.csv("paper_figures/data/SPQV_results_ionomic.csv", stringsAsFactors = FALSE)
 qtl_range_to_show <- 1:199
 RWR_trunc <- RWR_results[c(1, 3, 2, 4, 5, 7, 6, 8), qtl_range_to_show]
 SPQV_trunc <- SPQV_results[qtl_range_to_show,]
@@ -145,25 +145,6 @@ for (row_i in 1:nrow(method_ratios)) {
     (spqv - rwr) /
     ((spqv + rwr)/2)
 }
-
-# Repro plot from July
-old_colors <- c(
-  "#009292", "#3EACAD", "#7CC5C9", "#BADFE4", "#F8F8FF", "#F8F8FF", "#DFD5EF", "#C6B1E0", "#AD8ED0",
-  "#946AC1", "#7B47B1", "#6223A2", "#490092")
-old_breaks <- c(
-  0.3744321, 0.5032979, 0.6321636, 0.7610294, 0.8898951, 1.0187609, 1.1476266, 1.2764924, 1.4053581,
-  1.5342239, 1.6630896, 1.7919554, 1.9208211, 2.0496869)
-showHeatmap(
-  method_ratios,
-  color_vals = old_colors, color_breaks = old_breaks
-)
-# July but with pct
-old_breaks_pct <- (old_breaks-1)*100
-showHeatmap(
-  pct_change_SR,
-  color_vals = old_colors, color_breaks = old_breaks_pct
-)
-
 
 # FINAL PLOT ####
 
