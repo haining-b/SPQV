@@ -4,7 +4,7 @@
 
 setwd("/Users/katyblumer/repos/SPQV/")
 
-num_reps <- 100
+num_reps <- 1000
 
 trait <- "test_trait"
 
@@ -78,7 +78,7 @@ if (regenerate_results) {
   SPQV_results <- SPQValidate(
     qtl_list = qtl_list,
     trait = trait,
-    num_repetitions = 3,
+    num_repetitions = num_reps,
     placement_type = "extension",
     gene_list = gene_list,
     marker_list = marker_list,
@@ -152,8 +152,8 @@ for (row_i in 1:nrow(method_ratios)) {
 # FINAL PLOT ####
 
 # Each color bin represents a distance of bin_width from 0
-bin_width <- 10
-max_val <- 250
+bin_width <- 5
+max_val <- 50
 color_breaks <- seq(bin_width, max_val, by = bin_width)
 color_breaks <- sort(c(color_breaks, -color_breaks))
 
@@ -161,3 +161,4 @@ final_plot <- showHeatmap(
   pct_diff_avg,
   color_breaks = color_breaks
 )
+
