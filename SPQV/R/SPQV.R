@@ -335,8 +335,8 @@ CountGenesFound <-
           ))
     }
 
-    if (nrow(trait_gene_list) <= 1) {
-      return(trait_gene_list)
+    if (nrow(trait_gene_list) < 1) {
+      stop("No genes supplied for this trait.")
     }
 
     trait_qtl_list <-
@@ -344,7 +344,6 @@ CountGenesFound <-
     if (nrow(trait_qtl_list) == 0) {
       stop("No QTL found for this trait.")
     }
-
 
     trait_qtl_list$NumGenes <- 0
     trait_qtl_list$FoundGeneIDs <- 0
@@ -652,6 +651,25 @@ SPQValidate <- function(qtl_list,
 
   simulation_env$SimulationDataFrame <- output
 
+  # group by ('Trait','Treatment',"Method","ExptType") by hand bc plyr wasn't cooperating
+  metadata_qtl_list<-qtl_metadata[,c('Trait','Treatment',"Method","ExptType")]
+  if (! all(rownames(metadata_qtl_list) == rownames(qtl_gene_counts))) {
+    stop("Probably runtime error: Rownames for metadata_qtl_list don't match qtl_gene_counts.")
+  }
+  groups_of_qtl<-unique(metadata_qtl_list)
+  for(grouping_i in 1:nrow(groups_of_qtl)){
+    tr <- groups_of_qtl$Treatment[grouping_i]
+    meth <- groups_of_qtl$Method[grouping_i]
+    ET <- groups_of_qtl$ExptType[grouping_i]
+    tra <- groups_of_qtl$Trait[grouping_i]
+
+    indices_for_grouping <- rownames(metadata_qtl_list[metadata_qtl_list$Treatment==tr &
+                                                         metadata_qtl_list$Trait==tra &
+                                                         metadata_qtl_list$ExptType==ET &
+                                                         metadata_qtl_list$Method==meth,])
+    qtl_gene_counts[indices_for_grouping,'QTLGroup'] <- paste0('Group',grouping_i)
+  }
+
   std_devs <- apply(output, MARGIN = 1, FUN = stats::sd)  # 1 means row-wise
   upper <- c()
   center <- c()
@@ -674,33 +692,14 @@ SPQValidate <- function(qtl_list,
   upper_sum_of_CIstoSum<-c()
   lower_sum_of_CIstoSum<-c()
 
-  # group by ('Trait','Treatment',"Method","ExptType") by hand bc plyr wasn't cooperating
-  metadata_qtl_list<-qtl_metadata[,c('Trait','Treatment',"Method","ExptType")]
-  if (! all(rownames(metadata_qtl_list) == rownames(qtl_gene_counts))) {
-    stop("Probably runtime error: Rownames for metadata_qtl_list don't match qtl_gene_counts.")
-  }
-  groups_of_qtl<-unique(metadata_qtl_list)
-  for(grouping_i in 1:nrow(groups_of_qtl)){
-    tr <- groups_of_qtl$Treatment[grouping_i]
-    meth <- groups_of_qtl$Method[grouping_i]
-    ET <- groups_of_qtl$ExptType[grouping_i]
-    tra <- groups_of_qtl$Trait[grouping_i]
-
-    indices_for_grouping <- rownames(metadata_qtl_list[metadata_qtl_list$Treatment==tr &
-                                                       metadata_qtl_list$Trait==tra &
-                                                       metadata_qtl_list$ExptType==ET &
-                                                       metadata_qtl_list$Method==meth,])
-    qtl_gene_counts[indices_for_grouping,'QTLGroup'] <- paste0('Group',grouping_i)
-  }
-
   for(grouping_i in unique(qtl_gene_counts$QTLGroup)){
     CIstoSum_indices<-which(qtl_gene_counts$QTLGroup==grouping_i)
 
     dist_ctr <- center[CIstoSum_indices]
-    dist_radius<-upper[CIstoSum_indices] - dist_ctr
-    sqr_rad<-dist_radius^2
+    dist_radius <- upper[CIstoSum_indices] - dist_ctr
+    sqr_rad <- dist_radius^2
 
-    adjusted_center<-mean(dist_ctr)
+    adjusted_center<-sum(dist_ctr)
     adjusted_radius<-sqrt(sum(sqr_rad))
 
     upper_sum_of_CIstoSum[CIstoSum_indices]<- adjusted_center + adjusted_radius
