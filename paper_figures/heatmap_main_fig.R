@@ -104,10 +104,40 @@ if (regenerate_results) {
 # 7  ye_m | no_bb | unid | n_dup  6
 # 8  ye_m | no_bb | bidi | n_dup  8
 
+orig_figure_order <- data.frame(matrix(nrow=8, ncol=4))
+orig_i <- 1
+for (markers_only in c(FALSE, TRUE)) {
+  for (skip_hangovers in c(FALSE, TRUE)) {
+    for (bidirectional in c(FALSE, TRUE)) {
+      for (drop_tandem in c(FALSE, TRUE)) {
+        orig_figure_order[orig_i, ] <- c(markers_only, skip_hangovers, bidirectional, drop_tandem)
+        orig_i <- orig_i + 1
+      }
+    }
+  }
+}
+new_figure_order <- numeric(16)
+new_i <- 1
+for (markers_only in c(FALSE, TRUE)) {  ## EDIT ORDER OF THESE
+  for (skip_hangovers in c(FALSE, TRUE)) {
+    for (drop_tandem in c(FALSE, TRUE)) {
+      for (bidirectional in c(FALSE, TRUE)) {
+      new_figure_order[new_i] <- which(
+        orig_figure_order[1] == markers_only &
+          orig_figure_order[2] == skip_hangovers &
+          orig_figure_order[3] == bidirectional &
+          orig_figure_order[4] == drop_tandem
+      )
+      new_i <- new_i + 1
+      }
+    }
+  }
+}
+
 RWR_results <- read.csv("paper_figures/output_data/RWR_results.csv", stringsAsFactors = FALSE)
 SPQV_results <- read.csv("paper_figures/output_data/SPQV_results.csv", stringsAsFactors = FALSE)
 qtl_range_to_show <- 1:199
-RWR_trunc <- RWR_results[c(1, 3, 2, 4, 5, 7, 6, 8), qtl_range_to_show]
+RWR_trunc <- RWR_results[new_figure_order, qtl_range_to_show]
 SPQV_trunc <- SPQV_results[qtl_range_to_show,]
 
 colnames(RWR_trunc) <- SPQV_trunc$QTL
