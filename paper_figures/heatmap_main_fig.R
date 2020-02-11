@@ -36,7 +36,7 @@ qtl_list$Length <-qtl_list$RightmostMarker - qtl_list$LeftmostMarker
 
 wgd$GeneMiddle <- as.integer(wgd$GeneStart + round((wgd$GeneEnd - wgd$GeneStart) /2, 0))
 
-regenerate_results <- TRUE
+regenerate_results <- FALSE
 
 
 # Run RWR and SPQV ####

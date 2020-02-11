@@ -66,7 +66,8 @@ RWR <- function(
   gene_list,
   marker_list,
   chromosome_size,
-  n_reps
+  n_reps,
+  intermediate_output_env = NULL
 ) {
 
   qtl_list <- validateDf(qtl_list, list(
@@ -113,6 +114,11 @@ RWR <- function(
   )
 
   qtl_cis <- rep(0, nrow(qtl_list))
+
+  if (!is.null(intermediate_output_env)) {
+    intermediate_output_env$RWR_sim_gene_counts <- data.frame(
+      matrix(NA, nrow=nrow(qtl_list), ncol=num_reps))
+  }
 
   for (qtl_i in 1:nrow(qtl_list)) {
     qtl_length <- qtl_list[qtl_i, "Length"]
@@ -169,6 +175,10 @@ RWR <- function(
     ))
 
     qtl_cis[qtl_i] <- BCA_CIs["0.95", "bca"]
+
+    if (!is.null(intermediate_output_env)) {
+      intermediate_output_env$RWR_sim_gene_counts[qtl_i, ] <- exp_genes_found
+    }
 
   } # endfor qtl_list
 
