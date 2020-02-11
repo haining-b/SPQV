@@ -4,7 +4,7 @@
 
 setwd("/Users/katyblumer/repos/SPQV/")
 
-num_reps <- 1000
+num_reps <- 100
 
 trait <- "test_trait"
 
@@ -41,8 +41,6 @@ wgd$GeneMiddle <- as.integer(wgd$GeneStart + round((wgd$GeneEnd - wgd$GeneStart)
 regenerate_results <- TRUE
 
 if (regenerate_results) {
-  sim_results_env_71 <- new.env()
-
   RWR_results <- as.data.frame(matrix(nrow=16,ncol=nrow(qtl_list)))
 
   row_i <- 1
@@ -63,15 +61,14 @@ if (regenerate_results) {
           gene_list = gene_list,
           marker_list = marker_list,
           chromosome_size = chromosome_size,
-          n_reps = num_reps,
-          intermediate_output_env = sim_results_env_71
+          n_reps = num_reps
         )
         row_i <- row_i + 1
       }
     }
   }
 
-  write.csv(x = RWR_results, file = "paper_figures/output_data/RWR_results_ionomic.csv", row.names=FALSE)
+  write.csv(x = RWR_results, file = "paper_figures/data/RWR_results_ionomic.csv", row.names=FALSE)
 
 
 
@@ -84,10 +81,10 @@ if (regenerate_results) {
     marker_list = marker_list,
     wgd,
     chromosome_size = chromosome_size,
-    sim_results_env_71
+    new.env()
   )
 
-  write.csv(x = SPQV_results, file = "paper_figures/output_data/SPQV_results_ionomic.csv", row.names=FALSE)
+  write.csv(x = SPQV_results, file = "paper_figures/data/SPQV_results_ionomic.csv", row.names=FALSE)
 
 }
 
@@ -103,8 +100,8 @@ if (regenerate_results) {
 # 7  ye_m | no_bb | unid | n_dup  6
 # 8  ye_m | no_bb | bidi | n_dup  8
 
-RWR_results <- read.csv("paper_figures/output_data/RWR_results_ionomic.csv", stringsAsFactors = FALSE)
-SPQV_results <- read.csv("paper_figures/output_data/SPQV_results_ionomic.csv", stringsAsFactors = FALSE)
+RWR_results <- read.csv("paper_figures/data/RWR_results_ionomic.csv", stringsAsFactors = FALSE)
+SPQV_results <- read.csv("paper_figures/data/SPQV_results_ionomic.csv", stringsAsFactors = FALSE)
 qtl_range_to_show <- 1:199
 RWR_trunc <- RWR_results[c(1, 3, 2, 4, 5, 7, 6, 8), qtl_range_to_show]
 SPQV_trunc <- SPQV_results[qtl_range_to_show,]
