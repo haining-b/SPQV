@@ -201,13 +201,13 @@ gene_list$Trait <- trait
 gene_list <- gene_list[, c("ID", "Trait", "Chromosome", "Base")]
 
 qtl_list <- dplyr::rename(qtl_list,
-              Chromosome="chromosome", LeftmostMarker="LCI_marker", RightmostMarker="RCI_pos",
-              Trait="trait", Treatment="treatment", Method="type",
-              ExptType="expt_type")
+                          Chromosome="chromosome", LeftmostMarker="LCI_marker", RightmostMarker="RCI_pos",
+                          Trait="trait", Treatment="treatment", Method="type",
+                          ExptType="expt_type")
 qtl_list$Length <-as.integer(0)
 qtl_list$Trait <- trait
 qtl_list <- qtl_list[, c("Chromosome", "LeftmostMarker", "RightmostMarker", "Trait", "Treatment",
-               "Method", "ExptType", "Length" )]
+                         "Method", "ExptType", "Length" )]
 qtl_list$Length <-qtl_list$RightmostMarker - qtl_list$LeftmostMarker
 
 wgd$GeneMiddle <- as.integer(wgd$GeneStart + round((wgd$GeneEnd - wgd$GeneStart) /2, 0))
@@ -359,8 +359,8 @@ showHeatmap <- function(data_df,
 # 7  ye_m | no_bb | unid | n_dup  6
 # 8  ye_m | no_bb | bidi | n_dup  8
 
-RWR_results <- read.csv("example_data/RWR_results.csv")
-SPQV_results <- read.csv("example_data/SPQV_results.csv")
+RWR_results <- read.csv("example_data/RWR_results.csv", stringsAsFactors = FALSE)
+SPQV_results <- read.csv("example_data/SPQV_results.csv", stringsAsFactors = FALSE)
 qtl_range_to_show <- 1:199
 RWR_trunc <- RWR_results[c(1, 3, 2, 4, 5, 7, 6, 8), qtl_range_to_show]
 SPQV_trunc <- SPQV_results[qtl_range_to_show,]
@@ -368,7 +368,7 @@ SPQV_trunc <- SPQV_results[qtl_range_to_show,]
 colnames(RWR_trunc) <- SPQV_trunc$QTL
 
 spqv <- SPQV_trunc[, "Upper.95..CI"] # Special characters are removed when loading from CSV
-if (min(spqv) < 0 | min(RWR_trunc) < 0) {
+if ((min(na.omit(spqv)) < 0)| min(na.omit(unlist(RWR_trunc))) < 0) {
   stop("RWR or SPQV upper confidence intervals contain negative values")
 }
 
