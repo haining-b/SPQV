@@ -122,6 +122,8 @@ pct_change_SR <- RWR_trunc
 pct_diff_avg <- RWR_trunc
 pct_diff_max <- RWR_trunc
 pct_diff_min <- RWR_trunc
+subtract_diff <- RWR_trunc
+ceiling_diff <- RWR_trunc
 for (row_i in 1:nrow(method_ratios)) {
   rwr <- RWR_trunc[row_i, ]
 
@@ -147,7 +149,30 @@ for (row_i in 1:nrow(method_ratios)) {
   pct_diff_avg[row_i, ] <- 100 *
     (spqv - rwr) /
     ((spqv + rwr)/2)
+
+  subtract_diff[row_i, ] <-
+    (spqv - rwr)
+
+  ceiling_diff[row_i, ] <-
+    (ceiling(spqv) - ceiling(unlist(rwr)))
 }
+
+
+# Ceiling plot ####
+bin_width <- 1
+max_val <- 5
+color_breaks <- seq(bin_width, max_val, by = bin_width)
+color_breaks <- sort(c(color_breaks, -color_breaks, -0.01, 0.01))
+showHeatmap(
+  ceiling_diff,
+  color_breaks = color_breaks
+)
+
+showHeatmap(
+  subtract_diff,
+  num_colors = 41
+)
+
 
 # FINAL PLOT ####
 
