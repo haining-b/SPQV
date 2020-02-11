@@ -92,7 +92,7 @@ if (regenerate_results) {
 }
 
 
-###### Make plot #####
+###### Plots ----------- #####
 
 # RWR results (and orig figure order):
 # 1  no_m | ye_bb | unid | n_dup  1
@@ -158,7 +158,7 @@ for (row_i in 1:nrow(method_ratios)) {
     (ceiling(spqv) - ceiling(unlist(rwr)))
 }
 
-# Repro plot from July
+# Repro plot from July ####
 old_colors <- c(
   "#009292", "#3EACAD", "#7CC5C9", "#BADFE4", "#F8F8FF", "#F8F8FF", "#DFD5EF", "#C6B1E0", "#AD8ED0",
   "#946AC1", "#7B47B1", "#6223A2", "#490092")
