@@ -32,10 +32,10 @@ library(stringr)
 library("ggplot2")
 # library(SPQV)
 
+source('~/repos/SPQV/R/SPQV_refactored.r')
 
-placement_type <- "extension"
-trait <- "test_trait"
 
+# Data cleaning ####
 markers <- read.csv("example_data/TeoNAM_Marker_List.csv", stringsAsFactors = FALSE)
 qtl <- read.csv("example_data/all_teonam_tb1_traits.csv", stringsAsFactors = FALSE)
 chromosome_size <- read.csv("example_data/Maize_Chromosome_Size.csv", stringsAsFactors = FALSE)
@@ -111,28 +111,31 @@ expTitle <- function(var_name, changed_val) {
 }
 
 
+# Vars ####
+placement_type <- "extension"
+trait <- "test_trait"
+
 my_env <- new.env()
 
-num_benchmark_reps <- 100
+num_benchmark_reps <- 1  # DO NOT SUBMIT was 100
 
 # Make experiment parameter list
 qtl_nums <- c(10, 3, 1)
-bootstrap_nums <- c(100, 10, 1)
-gene_nums <- c(50, 10, 5)
+bootstrap_nums <- c(1000, 100, 10)
+gene_nums <- c(50, 15, 5)
 marker_nums <- c(10e3, 3e3, 1e3)  # only have 13k, otherwise would be 2e3, 10e3, 100e3
-qtl_lens <- c(100e6, 10e6, 1e6)  # max int is ~2e9
+qtl_lens <- c(100e6, 10e6, 1e6)  # R's max int is ~2e9
 
-vars <- list(qtl_nums, bootstrap_nums, gene_nums, marker_nums, qtl_lens)
-var_titles <- c("QTL Count", "Bootstrap Reps", "Known Gene Count", 'Marker Count', 'QTL Length')
+vars <- list(qtl_lens, marker_nums, gene_nums, qtl_nums, bootstrap_nums)
+var_titles <- c('QTL Length', 'Marker Count', "Known Gene Count", "QTL Count", "Bootstrap Reps")
 
+# Main ####
 base_combo <- c()
 middle_val_i <- 2
 for (li in vars) {
   base_combo <- c(base_combo, li[middle_val_i])
 }
 
-
-mbms <- c()
 
 mbm_df <- data.frame(1:num_benchmark_reps)
 temp_colname <- expTitle(var_titles[[1]], vars[[1]][1])
@@ -148,19 +151,20 @@ for (li_i in 1:length(vars)) {
     var_combo[li_i] <- changed_val
 
     colname <- expTitle(var_title, changed_val)
+    print(paste(format(Sys.time(), "%c"), colname))
 
-    num_qtl <- var_combo[1]
-    num_bootstraps <- var_combo[2]
+    qtl_len <- var_combo[1]
+    num_markers <- var_combo[2]
     num_genes <- var_combo[3]
-    num_markers <- var_combo[4]
-    qtl_len <- var_combo[5]
+    num_qtl <- var_combo[4]
+    num_bootstraps <- var_combo[5]
 
     mbm <- microbenchmark(
       spqv_and_sample = {
         sampled_genes <- sample_n(gene_list, num_genes, replace=FALSE)
         sampled_markers <- sample_n(markers, num_markers, replace=FALSE)
         sample_qtl <- sampleQTL(qtl_len, num_qtl, markers, chromosome_size)
-        SPQValidate(
+        TEMP <- SPQValidate(  # DO NOT SUBMIT
           qtl_list = sample_qtl,
           trait = trait,
           num_repetitions = num_bootstraps,
@@ -172,6 +176,7 @@ for (li_i in 1:length(vars)) {
           simulation_env = my_env,
           progress_bar = FALSE
         )
+        print(TEMP) # DO NOT SUBMIT
       },
       sample_only = {
         sampled_genes <- sample_n(gene_list, num_genes, replace=FALSE)
@@ -181,9 +186,7 @@ for (li_i in 1:length(vars)) {
       times = num_benchmark_reps
     )
 
-    mbms <- c(mbms, mbm)
-
-    # Subtract median sample prep time from all runs
+    # Subtract median sample prep time from all runs; usually only 1-2 microseconds.
     mbm_df[colname] <-  (
       mbm[which(mbm$expr=="spqv_and_sample"), 'time'] -
         median(mbm[which(mbm$expr=="sample_only"), 'time'])
@@ -191,19 +194,28 @@ for (li_i in 1:length(vars)) {
   }
 }
 
-plot_df <- melt(mbm_df)
-colnames(plot_df) <- c("Parameters", "Nanoseconds")
-plot_df$Milliseconds <- (plot_df$Nanoseconds / 1e6)
-p <- ggplot(plot_df, aes(x=Parameters, y=Milliseconds)) + geom_violin() + coord_flip()
-p
-p + stat_summary(fun.data=mean_sdl, geom="pointrange", color="red") + ylim(-1, 50)
-p + stat_summary(fun.data=mean_sdl, geom="pointrange", color="red") +
-  ylab("Milliseconds")+
-  # ylim(-1, 1000)+
-  xlab("Parameter Varied")+
-  theme_classic()
-#theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-
 medians <- data.frame(apply(mbm_df, MARGIN = 2, FUN = median))
 colnames(medians) <- c('median')
 print(medians)
+
+# Plotting ####
+plot_df <- melt(mbm_df)
+colnames(plot_df) <- c("Parameters", "Nanoseconds")
+plot_df$Milliseconds <- (plot_df$Nanoseconds / 1e6)
+plot_df$Seconds <- (plot_df$Nanoseconds / 1e9)
+plot_df$ParamType <- unlist(lapply(str_split(plot_df$Parameters, ":"), "[[", 1))
+
+p <- ggplot(plot_df, aes(x=Parameters, y=Seconds, color=ParamType, fill=ParamType)) + geom_violin(lwd=1) + coord_flip()
+# geom_dotplot(binaxis='y', stackdir='center', dotsize=.2)+
+# theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+pretty_plot <- p +
+  stat_summary(fun.data=mean_sdl, geom="pointrange", color="black") +
+  ylab("Time (seconds)")+
+  # ylim(-1, 1000)+
+  xlab("Parameter Varied") +
+  scale_color_brewer(palette="Set1")+
+  scale_fill_brewer(palette="Set1")+
+  theme_classic() +
+  theme(legend.position = "none")
+
+pretty_plot
