@@ -133,12 +133,14 @@ FilterGeneList <-
     loci_list <-
       loci_list[order(loci_list$Chromosome, loci_list$Base), ]
     gene_spots<-which(loci_list$Trait==trait)
-    tandem_arrays <- c()
+    tandem_arrays <- c(0)
+    current_tandem_marker<-1
     # TODO is equiv to saving prev marker, shuffling, and then dropping dups?
     for (i in 2:length(gene_spots)) {
       if (gene_spots[i] == gene_spots[i - 1] + 1) {
         tandem_arrays[i] <- 1
-        tandem_arrays[i - 1] <- 1
+        #tandem_arrays[i - 1] <- current_tandem_marker
+
       } else{
         tandem_arrays[i] <- 0
       }
@@ -146,23 +148,33 @@ FilterGeneList <-
     if (is.na(tandem_arrays[1])) {
       tandem_arrays[1] <- 0
     }
-    sequential_increases <- rle(tandem_arrays)
-    vals <- sequential_increases$values
-    longs <- sequential_increases$lengths
-    presence_absence <- c()
-    for (seq_i in 1:length(vals)) {
-      if (vals[seq_i] == 0) {
-        presence_absence <- c(presence_absence, rep(1, longs[seq_i]))
-      }
-      else{
-        pos_selected <- sample(1:longs[seq_i], 1)
-        low_substitute_zeroes <- rep(0, (pos_selected - 1))
-        high_substitute_zeroes <- rep(0, longs[seq_i] - pos_selected)
-        all_subs <- c(low_substitute_zeroes, 1, high_substitute_zeroes)
-        presence_absence <- c(presence_absence, all_subs)
+    
+    for(array_i in 2: length(tandem_arrays)){
+      if(tandem_arrays[array_i]==1 & tandem_arrays[array_i-1] !=1){
+        tandem_arrays[array_i-1]= 9
       }
     }
-    return(unique(trait_gene_list[grep(1, presence_absence), ]))
+    array_starts <- which(tandem_arrays==9)
+    array_middles <- which(tandem_arrays==1)
+    array_ends<-c()
+    for(sex_i in array_middles){
+      if(tandem_arrays[sex_i+1] != tandem_arrays[sex_i] |sex_i==length(tandem_arrays)){
+        array_ends<-c(array_ends , sex_i)
+      }
+    }
+    
+    genes_to_be_kept<-c()
+    for(array_i in 1:length(array_starts)){
+       start_index<-gene_spots[array_starts[array_i]]
+       end_index<-gene_spots[array_ends[array_i]]
+       the_remaining_gene<-sample(start_index:end_index,1)
+       genes_to_be_kept<-c(genes_to_be_kept,the_remaining_gene)
+    }
+    
+    smol_gene_spots<-gene_spots[-c(array_starts,array_middles,array_ends)]
+    trimmed_gene_spots<-c(smol_gene_spots,genes_to_be_kept)
+    final_gene_list<-loci_list[trimmed_gene_spots,]
+    return(final_gene_list)
   }
 
 
