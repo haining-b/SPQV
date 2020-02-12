@@ -249,12 +249,16 @@ QTLPlacementProbabilities <-
 
       for (chr_i in  1:num_chromosomes) {
         first_marker <-
-          chromosome_size$LeftmostMarker[chr_i]
+          as.numeric(chromosome_size$LeftmostMarker[chr_i])
         last_marker <-
-          chromosome_size$RightmostMarker[chr_i]
+          as.numeric(chromosome_size$RightmostMarker[chr_i])
 
         first_avail_base <- first_marker + qtl_ext_length
         last_avail_base <- last_marker - qtl_ext_length
+        if(first_avail_base>last_avail_base){
+          poss_positions[qtl_i, chr_i + 1] <-0
+          next()
+        }
 
         chr_markers <-sectioned_marker_list[chr_i]
         chr_markers<-chr_markers[[1]]
@@ -279,7 +283,11 @@ QTLPlacementProbabilities <-
           length_remaining_markers
       }
     }
+    unplaceable_qtl<-which(rowSums(poss_positions[, 2:ncol(poss_positions)])==0)
     marker_probs <- 1 / rowSums(poss_positions[, 2:ncol(poss_positions)])
+    if(length(unplaceable_qtl)>0){
+      marker_probs[unplaceable_qtl]<-0
+    }
 
     return(marker_probs)
   }
@@ -675,6 +683,7 @@ SPQValidate <- function(qtl_list,
   center <- c()
   lower <- c()
 
+   
   for (qtl_i in 1:nrow(qtl_gene_counts)) {
     z_value <-
       stats::qnorm(.025,
@@ -698,6 +707,7 @@ SPQValidate <- function(qtl_list,
     dist_ctr <- center[CIstoSum_indices]
     distvars<-c()
     for(dist_i in 1: length(CIstoSum_indices)){
+      
       dist_var<-var(unlist(output[CIstoSum_indices[dist_i],]))
       distvars<-c(distvars,dist_var)
     }
