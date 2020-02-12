@@ -267,10 +267,11 @@ QTLPlacementProbabilities <-
 
         first_avail_base <- first_marker + qtl_ext_length
         last_avail_base <- last_marker - qtl_ext_length
-        if(first_avail_base>last_avail_base){
+        if(first_avail_base>last_marker | 
+           last_avail_base < first_marker){
           poss_positions[qtl_i, chr_i + 1] <-0
-          next()
-        }
+          next
+          }
 
         chr_markers <-sectioned_marker_list[chr_i]
         chr_markers<-chr_markers[[1]]
