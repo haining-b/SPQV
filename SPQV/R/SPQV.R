@@ -682,8 +682,8 @@ SPQValidate <- function(qtl_list,
     mu <- rowMeans(output)[qtl_i]
 
     center <- c(center, mu)
-    upper <- c(upper, mu + z_value * (std_devs[qtl_i]/sqrt(num_repetitions)))
-    lower <- c(lower, mu - z_value * (std_devs[qtl_i]/sqrt(num_repetitions)))
+    upper <- c(upper, mu + z_value * (std_devs[qtl_i]))
+    lower <- c(lower, mu - z_value * (std_devs[qtl_i]))
   }
 
   #dealing with multiple testing
