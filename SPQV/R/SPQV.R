@@ -692,7 +692,9 @@ SPQValidate <- function(qtl_list,
   simulation_env$SimulationDataFrame <- output
 
   # group by ('Trait','Treatment',"Method","ExptType") by hand bc plyr wasn't cooperating
-  metadata_qtl_list<-qtl_metadata[,c('Trait','Treatment',"Method","ExptType")]
+  #qtl_metadata incl. ALL qtl, not just the QTL for this trait
+  metadata_qtl_list<-qtl_list[which(qtl_list$Trait == trait),
+                              c('Trait','Treatment',"Method","ExptType")]
   if (! all(rownames(metadata_qtl_list) == rownames(qtl_gene_counts))) {
     stop("Probably runtime error: Rownames for metadata_qtl_list don't match qtl_gene_counts.")
   }
@@ -740,12 +742,12 @@ SPQValidate <- function(qtl_list,
     dist_stds<-c()
     for(dist_i in 1: length(CIstoSum_indices)){
 
-      dist_std<-std(unlist(output[CIstoSum_indices[dist_i],]))
+      dist_std<-stats::sd(unlist(output[CIstoSum_indices[dist_i],]))
       dist_stds<-c(dist_stds,dist_std)
     }
     vars<-dist_stds^2
 
-    adjusted_center<-sum(dist_ctr)
+    adjusted_center<-sum(dist_ctrs)
     adjusted_std<-sqrt(sum(vars))
 
     upper_sum_of_CIstoSum[CIstoSum_indices]<- adjusted_center + (adjusted_std * z_value)
