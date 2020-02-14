@@ -533,7 +533,17 @@ SPQValidate <- function(qtl_list,
     c("Method", "character"),
     c("ExptType", "character")
   ))  # TODO combine to just say "group"
+  
+  if (typeof(trait) != 'character') {
+    stop("Trait input must be of type 'character'.")
+  }
+  trait <- tolower(trait)
+  gene_list$Trait <- tolower(gene_list$Trait)
+  qtl_list$Trait <- tolower(qtl_list$Trait)
 
+  metadata_qtl_list<-qtl_metadata[which(qtl_list$Trait == trait),
+                              c('Trait','Treatment',"Method","ExptType")]
+  
   qtl_list <- validateDf(qtl_list, list(
     c("Chromosome", "integer"),
     c("LeftmostMarker", "integer"),
@@ -568,13 +578,6 @@ SPQValidate <- function(qtl_list,
   ))
 
   # TODO check that loci are in bp and not in cM?
-
-  if (typeof(trait) != 'character') {
-    stop("Trait input must be of type 'character'.")
-  }
-  trait <- tolower(trait)
-  gene_list$Trait <- tolower(gene_list$Trait)
-  qtl_list$Trait <- tolower(qtl_list$Trait)
 
   placement_types <- c("extension", "centered")
   if (!(placement_type %in% placement_types)) {
@@ -692,9 +695,7 @@ SPQValidate <- function(qtl_list,
   simulation_env$SimulationDataFrame <- output
 
   # group by ('Trait','Treatment',"Method","ExptType") by hand bc plyr wasn't cooperating
-  #qtl_metadata incl. ALL qtl, not just the QTL for this trait
-  metadata_qtl_list<-qtl_list[which(qtl_list$Trait == trait),
-                              c('Trait','Treatment',"Method","ExptType")]
+
   if (! all(rownames(metadata_qtl_list) == rownames(qtl_gene_counts))) {
     stop("Probably runtime error: Rownames for metadata_qtl_list don't match qtl_gene_counts.")
   }
