@@ -128,6 +128,18 @@ FilterGeneList <-
       return(trait_gene_list)
     }
 
+    #' gene_list = sort(gene_list, by=[chr, base])
+    #' marker_list = sort(marker_list, [chr, base])
+    #' # loci_list <- loci_list[order(loci_list$Chromosome, loci_list$Base), ]
+    #' curr_chr = 1
+    #' gene_list$next_marker = ""
+    #' for each gene in gene_list:
+    #'   next_marker =
+    #' gene_list = shuffle(gene_list)
+    #' gene_list = drop_duplicates(gene_list, by='next_marker')
+
+
+
     marker_list$Trait <- "Marker"
     loci_list <- rbind(marker_list, trait_gene_list)
     loci_list <-
@@ -148,7 +160,7 @@ FilterGeneList <-
     if (is.na(tandem_arrays[1])) {
       tandem_arrays[1] <- 0
     }
-    
+
     for(array_i in 2: length(tandem_arrays)){
       if(tandem_arrays[array_i]==1 & tandem_arrays[array_i-1] !=1){
         tandem_arrays[array_i-1]= 9
@@ -162,10 +174,11 @@ FilterGeneList <-
         array_ends<-c(array_ends , sex_i)
       }
     }
-    
+
     genes_to_be_kept<-c()
     if(length(array_starts)>0){
       for(array_i in 1:length(array_starts)){
+
         start_index<-gene_spots[array_starts[array_i]]
         end_index<-gene_spots[array_ends[array_i]]
         the_remaining_gene<-sample(start_index:end_index,1)
@@ -177,8 +190,8 @@ FilterGeneList <-
     } else{
       final_gene_list<-loci_list[gene_spots,]
     }
-    
-    
+
+
     return(final_gene_list)
   }
 
@@ -272,7 +285,7 @@ QTLPlacementProbabilities <-
 
         first_avail_base <- first_marker + qtl_ext_length
         last_avail_base <- last_marker - qtl_ext_length
-        if(first_avail_base>last_marker | 
+        if(first_avail_base>last_marker |
            last_avail_base < first_marker){
           poss_positions[qtl_i, chr_i + 1] <-0
           next
@@ -519,7 +532,8 @@ SPQValidate <- function(qtl_list,
     c("Treatment", "character"),
     c("Method", "character"),
     c("ExptType", "character")
-  ))
+  ))  # TODO combine to just say "group"
+
   qtl_list <- validateDf(qtl_list, list(
     c("Chromosome", "integer"),
     c("LeftmostMarker", "integer"),
@@ -701,11 +715,11 @@ SPQValidate <- function(qtl_list,
   center <- c()
   lower <- c()
 
-   
+  z_value <-
+    stats::qnorm(.025,
+                 lower.tail = FALSE)
+
   for (qtl_i in 1:nrow(qtl_gene_counts)) {
-    z_value <-
-      stats::qnorm(.025,
-            lower.tail = FALSE)
     mu <- rowMeans(output)[qtl_i]
 
     center <- c(center, mu)
@@ -722,26 +736,20 @@ SPQValidate <- function(qtl_list,
   for(grouping_i in unique(qtl_gene_counts$QTLGroup)){
     CIstoSum_indices<-which(qtl_gene_counts$QTLGroup==grouping_i)
 
-    dist_ctr <- center[CIstoSum_indices]
-    distvars<-c()
+    dist_ctrs <- center[CIstoSum_indices]
+    dist_stds<-c()
     for(dist_i in 1: length(CIstoSum_indices)){
-      
-      dist_var<-var(unlist(output[CIstoSum_indices[dist_i],]))
-      distvars<-c(distvars,dist_var)
+
+      dist_std<-std(unlist(output[CIstoSum_indices[dist_i],]))
+      dist_stds<-c(dist_stds,dist_std)
     }
-    #dist_vars<-var(unlist(output[CIstoSum_indices,]))
-    #dist_radius <- upper[CIstoSum_indices] - dist_ctr
-    #sqr_rad <- dist_radius^2
-    sqr_vars<-distvars^2
+    vars<-dist_stds^2
 
     adjusted_center<-sum(dist_ctr)
-    #adjusted_radius<-sqrt(sum(sqr_rad))
-    adjusted_var<-sqrt(sum(sqr_vars))
+    adjusted_std<-sqrt(sum(vars))
 
-    #upper_sum_of_CIstoSum[CIstoSum_indices]<- adjusted_center + adjusted_radius
-    #lower_sum_of_CIstoSum[CIstoSum_indices]<- adjusted_center - adjusted_radius
-    upper_sum_of_CIstoSum[CIstoSum_indices]<- adjusted_center + adjusted_var
-    lower_sum_of_CIstoSum[CIstoSum_indices]<- adjusted_center - adjusted_var
+    upper_sum_of_CIstoSum[CIstoSum_indices]<- adjusted_center + (adjusted_std * z_value)
+    lower_sum_of_CIstoSum[CIstoSum_indices]<- adjusted_center - (adjusted_std * z_value)
   }
 
 
