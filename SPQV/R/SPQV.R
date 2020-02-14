@@ -164,16 +164,21 @@ FilterGeneList <-
     }
     
     genes_to_be_kept<-c()
-    for(array_i in 1:length(array_starts)){
-       start_index<-gene_spots[array_starts[array_i]]
-       end_index<-gene_spots[array_ends[array_i]]
-       the_remaining_gene<-sample(start_index:end_index,1)
-       genes_to_be_kept<-c(genes_to_be_kept,the_remaining_gene)
+    if(length(array_starts)>0){
+      for(array_i in 1:length(array_starts)){
+        start_index<-gene_spots[array_starts[array_i]]
+        end_index<-gene_spots[array_ends[array_i]]
+        the_remaining_gene<-sample(start_index:end_index,1)
+        genes_to_be_kept<-c(genes_to_be_kept,the_remaining_gene)
+        smol_gene_spots<-gene_spots[-c(array_starts,array_middles,array_ends)]
+        trimmed_gene_spots<-c(smol_gene_spots,genes_to_be_kept)
+        final_gene_list<-loci_list[trimmed_gene_spots,]
+      }
+    } else{
+      final_gene_list<-loci_list[gene_spots,]
     }
     
-    smol_gene_spots<-gene_spots[-c(array_starts,array_middles,array_ends)]
-    trimmed_gene_spots<-c(smol_gene_spots,genes_to_be_kept)
-    final_gene_list<-loci_list[trimmed_gene_spots,]
+    
     return(final_gene_list)
   }
 
