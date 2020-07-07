@@ -148,7 +148,11 @@ FilterGeneList <-
     if (is.na(tandem_arrays[1])) {
       tandem_arrays[1] <- 0
     }
-    
+
+    if (all(tandem_arrays == 0)) {
+      return(trait_gene_list)
+    }
+
     for(array_i in 2: length(tandem_arrays)){
       if(tandem_arrays[array_i]==1 & tandem_arrays[array_i-1] !=1){
         tandem_arrays[array_i-1]= 9

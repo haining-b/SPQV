@@ -87,6 +87,13 @@ test_that("FilterGenes removes tandem arrays by default", {
   )
 })
 
+test_that("FilterGenes can handle lists with no tandem arrays", {
+  output <- FilterGeneList(TRAIT, GENE_LIST[which(GENE_LIST$ID != "1.c"),], MARKER_LIST)
+  expect_setequal(
+    output$ID,
+    c("1.a", "1.b", "1.d", "2.a", "2.b", "2.c")
+  )
+})
 
 # QTLPlacementProbabilities ####
 test_that("QTLPlacementProbabilities gets correct probabilites for 'extension'", {
