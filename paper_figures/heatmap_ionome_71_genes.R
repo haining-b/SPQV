@@ -2,7 +2,8 @@
 
 # Run RWR and SPQV ####
 
-setwd("/Users/katyblumer/repos/SPQV/")
+setwd("/Users/katyblumer/repos/SPQV/SPQV")
+devtools::document(".")
 
 num_reps <- 1000
 
@@ -11,8 +12,8 @@ trait <- "test_trait"
 chromosome_size <- read.csv("example_data/Sviridis_ChromosomeSizes.csv", stringsAsFactors = FALSE)
 marker_list <- read.csv("example_data/Sviridis_MarkerList.csv", stringsAsFactors = FALSE)
 
-gene_list <- read.csv("IonomicGeneList.csv", stringsAsFactors = FALSE)
-qtl_list <- read.csv("R/FakeQTL.csv", stringsAsFactors = FALSE)
+gene_list <- read.csv("example_data/IonomicGeneList.csv", stringsAsFactors = FALSE)
+qtl_list <- read.csv("example_data/FakeQTL.csv", stringsAsFactors = FALSE)
 
 wgd <- read.csv("example_data/allSiGeneswithends.csv", stringsAsFactors = FALSE)
 
@@ -71,7 +72,7 @@ if (regenerate_results) {
     }
   }
 
-  write.csv(x = RWR_results, file = "paper_figures/output_data/RWR_results_ionomic.csv", row.names=FALSE)
+  write.csv(x = RWR_results, file = "../paper_figures/output_data/RWR_results_ionomic.csv", row.names=FALSE)
 
 
 
@@ -87,7 +88,7 @@ if (regenerate_results) {
     sim_results_env_71
   )
 
-  write.csv(x = SPQV_results, file = "paper_figures/output_data/SPQV_results_ionomic.csv", row.names=FALSE)
+  write.csv(x = SPQV_results, file = "../paper_figures/output_data/SPQV_results_ionomic.csv", row.names=FALSE)
 
 }
 
@@ -103,8 +104,8 @@ if (regenerate_results) {
 # 7  ye_m | no_bb | unid | n_dup  6
 # 8  ye_m | no_bb | bidi | n_dup  8
 
-RWR_results <- read.csv("paper_figures/output_data/RWR_results_ionomic.csv", stringsAsFactors = FALSE)
-SPQV_results <- read.csv("paper_figures/output_data/SPQV_results_ionomic.csv", stringsAsFactors = FALSE)
+RWR_results <- read.csv("../paper_figures/output_data/RWR_results_ionomic.csv", stringsAsFactors = FALSE)
+SPQV_results <- read.csv("../paper_figures/output_data/SPQV_results_ionomic.csv", stringsAsFactors = FALSE)
 qtl_range_to_show <- 1:199
 RWR_trunc <- RWR_results[c(1, 3, 2, 4, 5, 7, 6, 8), qtl_range_to_show]
 SPQV_trunc <- SPQV_results[qtl_range_to_show,]

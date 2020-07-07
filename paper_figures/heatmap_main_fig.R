@@ -1,6 +1,7 @@
 #Different types of bootstrapping for paper
 
-setwd("/Users/katyblumer/repos/SPQV/")
+setwd("/Users/katyblumer/repos/SPQV/SPQV")
+devtools::document(".")
 
 # Inputs ####
 num_reps <- 10
@@ -10,8 +11,8 @@ trait <- "test_trait"
 chromosome_size <- read.csv("example_data/Sviridis_ChromosomeSizes.csv", stringsAsFactors = FALSE)
 marker_list <- read.csv("example_data/Sviridis_MarkerList.csv", stringsAsFactors = FALSE)
 
-gene_list <- read.csv("R/FakeHBVGenes333.csv", stringsAsFactors = FALSE)
-qtl_list <- read.csv("R/FakeQTL.csv", stringsAsFactors = FALSE)
+gene_list <- read.csv("example_data/FakeHBVGenes333.csv", stringsAsFactors = FALSE)
+qtl_list <- read.csv("example_data/FakeQTL.csv", stringsAsFactors = FALSE)
 
 wgd <- read.csv("example_data/allSiGeneswithends.csv", stringsAsFactors = FALSE)
 
@@ -36,7 +37,7 @@ qtl_list$Length <-qtl_list$RightmostMarker - qtl_list$LeftmostMarker
 
 wgd$GeneMiddle <- as.integer(wgd$GeneStart + round((wgd$GeneEnd - wgd$GeneStart) /2, 0))
 
-regenerate_results <- FALSE
+regenerate_results <- TRUE
 
 
 # Run RWR and SPQV ####
@@ -71,14 +72,14 @@ if (regenerate_results) {
     }
   }
 
-  write.csv(x = RWR_results, file = "paper_figures/output_data/RWR_results.csv", row.names=FALSE)
+  write.csv(x = RWR_results, file = "../paper_figures/output_data/RWR_results.csv", row.names=FALSE)
 
 
 
   SPQV_results <- SPQValidate(
     qtl_list = qtl_list,
     trait = trait,
-    num_repetitions = 3,
+    num_repetitions = num_reps,
     placement_type = "extension",
     gene_list = gene_list,
     marker_list = marker_list,
@@ -87,7 +88,7 @@ if (regenerate_results) {
     sim_results_env
   )
 
-  write.csv(x = SPQV_results, file = "paper_figures/output_data/SPQV_results.csv", row.names=FALSE)
+  write.csv(x = SPQV_results, file = "../paper_figures/output_data/SPQV_results.csv", row.names=FALSE)
 
 }
 
@@ -134,8 +135,8 @@ for (markers_only in c(FALSE, TRUE)) {  ## EDIT ORDER OF THESE
   }
 }
 
-RWR_results <- read.csv("paper_figures/output_data/RWR_results.csv", stringsAsFactors = FALSE)
-SPQV_results <- read.csv("paper_figures/output_data/SPQV_results.csv", stringsAsFactors = FALSE)
+RWR_results <- read.csv("../paper_figures/output_data/RWR_results.csv", stringsAsFactors = FALSE)
+SPQV_results <- read.csv("../paper_figures/output_data/SPQV_results.csv", stringsAsFactors = FALSE)
 qtl_range_to_show <- 1:199
 RWR_trunc <- RWR_results[new_figure_order, qtl_range_to_show]
 SPQV_trunc <- SPQV_results[qtl_range_to_show,]

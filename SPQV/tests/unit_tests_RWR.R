@@ -1,4 +1,5 @@
 library(testthat)
+devtools::document("..")
 
 # Two chromosomes, with this structure (markers are numbers, genes are letters, each is 10 bp apart):
 # Chr 1: a  1  2  b  c  3  d  4  E  5  (has: gene w/o marker on end (a); tandem array (bc); different trait (E))

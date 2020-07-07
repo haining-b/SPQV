@@ -16,7 +16,7 @@
 # nickname       Dark and Stormy Night
 
 
-setwd("/Users/katyblumer/repos/SPQV")
+
 
 # # devtools::document('/Users/katyblumer/repos/SPQV')
 # devtools::install_github("olafmersmann/microbenchmarkCore")
@@ -32,8 +32,8 @@ library(stringr)
 library("ggplot2")
 # library(SPQV)
 
-source('~/repos/SPQV/R/SPQV_refactored.r')
-
+setwd("/Users/katyblumer/repos/SPQV/SPQV")
+devtools::document(".")
 
 # Data cleaning ####
 markers <- read.csv("example_data/TeoNAM_Marker_List.csv", stringsAsFactors = FALSE)
@@ -117,7 +117,7 @@ trait <- "test_trait"
 
 my_env <- new.env()
 
-num_benchmark_reps <- 1  # DO NOT SUBMIT was 100
+num_benchmark_reps <- 100
 
 # Make experiment parameter list
 qtl_nums <- c(10, 3, 1)
@@ -164,7 +164,7 @@ for (li_i in 1:length(vars)) {
         sampled_genes <- sample_n(gene_list, num_genes, replace=FALSE)
         sampled_markers <- sample_n(markers, num_markers, replace=FALSE)
         sample_qtl <- sampleQTL(qtl_len, num_qtl, markers, chromosome_size)
-        TEMP <- SPQValidate(  # DO NOT SUBMIT
+        SPQValidate(
           qtl_list = sample_qtl,
           trait = trait,
           num_repetitions = num_bootstraps,
@@ -176,7 +176,6 @@ for (li_i in 1:length(vars)) {
           simulation_env = my_env,
           progress_bar = FALSE
         )
-        print(TEMP) # DO NOT SUBMIT
       },
       sample_only = {
         sampled_genes <- sample_n(gene_list, num_genes, replace=FALSE)
